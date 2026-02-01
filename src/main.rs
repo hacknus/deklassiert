@@ -6,21 +6,19 @@ use std::{sync::Arc, time::Duration};
 #[cfg(feature = "server")]
 use once_cell::sync::Lazy;
 #[cfg(feature = "server")]
-use opentransportdata::parse_formation_json;
-#[cfg(feature = "server")]
 use std::fs;
+
+use opentransportdata::{parse_formation_json, FormationResponse};
 
 mod components;
 mod views;
 
-use components::Hero;
-use views::{Blog, Home};
+use views::Home;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
     #[route("/")] Home { },
-    #[route("/blog/:id")] Blog { id: i32 },
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -31,21 +29,25 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 use std::sync::RwLock;
 
 #[cfg(feature = "server")]
-static TABS: Lazy<Arc<RwLock<Vec<String>>>> = Lazy::new(|| {
+static TABS: Lazy<Arc<RwLock<FormationResponse>>> = Lazy::new(|| {
     let data = load_tabs_from_file();
     Arc::new(RwLock::new(data))
 });
 
 #[cfg(feature = "server")]
-fn load_tabs_from_file() -> Vec<String> {
+fn load_tabs_from_file() -> FormationResponse {
+    // todo replace string with vehicles at stop plus stop data
+
     let json_data = std::fs::read_to_string("test_data/test_response.json").expect("read json");
-    let formation = opentransportdata::parse_formation_json(&json_data).unwrap();
+    let formation = parse_formation_json(&json_data).unwrap();
+
+    // formation
+    //     .formations_at_scheduled_stops
+    //     .into_iter()
+    //     .map(|s| s.scheduled_stop.stop_point.name)
+    //     .collect();
 
     formation
-        .formations_at_scheduled_stops
-        .into_iter()
-        .map(|s| s.scheduled_stop.stop_point.name)
-        .collect()
 }
 
 #[cfg(feature = "server")]
@@ -70,10 +72,8 @@ fn main() {
     dioxus::launch(App);
 }
 
-use dioxus::prelude::*;
-
 #[server]
-async fn get_tabs() -> Result<Vec<String>, ServerFnError> {
+async fn get_train() -> Result<FormationResponse, ServerFnError> {
     Ok(TABS.read().unwrap().clone())
 }
 
