@@ -1,0 +1,342 @@
+{
+  "vehicleJourneyType": "VehicleJourneyStopBased",
+  "lastUpdate": "2026-01-31T17:44:27.017+01:00",
+  "journeyMetaInformation": {
+    "operationDate": "2026-01-31",
+    "SJYID": "ch:1:sjyid:100001:825-001"
+  },
+  "trainMetaInformation": {
+    "trainNumber": 825,
+    "toCode": "11",
+    "runs": "T"
+  },
+  "formationsAtScheduledStops": [
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8501609,
+          "name": "Brig"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": null,
+          "departureTime": "2026-01-31T14:45:00+01:00"
+        },
+        "track": "3"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,-(LK,-1,-2,-2@B,-2),[(FA:9#VH;NF,2:8#VH;NF,2:7#NF@C,2:6#NF,2:5#NF,W2:4#NF@D,1:3#NF,1:2#NF,1:1#BHP;BZ;NF,LK)],F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8501605,
+          "name": "Visp"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T14:52:00+01:00",
+          "departureTime": "2026-01-31T14:54:00+01:00"
+        },
+        "track": "4"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,[(FA:9#VH;NF,2:8#VH;NF,>2:7#NF@B,2:6#NF,2:5#NF,W2:4#NF,1:3#NF@C,1:2#NF,1:1#BHP;BZ;NF,LK)],F@D,F,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8507483,
+          "name": "Spiez"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T15:21:00+01:00",
+          "departureTime": "2026-01-31T15:22:00+01:00"
+        },
+        "track": "5"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,F,F,F,F,[(FA:9#VH;NF@B,2:8#VH;NF,2:7#NF,2:6#NF@C,2:5#NF,W2:4#NF,1:3#NF@D,1:2#NF,1:1#BHP;BZ;NF,LK)],F@E,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8507100,
+          "name": "Thun"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T15:31:00+01:00",
+          "departureTime": "2026-01-31T15:33:00+01:00"
+        },
+        "track": "2"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,F,[(FA:9#VH;NF,2:8#VH;NF@B,2:7#NF,2:6#NF@C,2:5#NF,W2:4#NF@D,1:3#NF,1:2#NF@E,1:1#BHP;BZ;NF,LK)],F@F,F,F@G,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8507000,
+          "name": "Bern"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T15:53:00+01:00",
+          "departureTime": "2026-01-31T16:02:00+01:00"
+        },
+        "track": "2"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,F,F@B,F,F,[(LK@C,1:1#BHP;BZ;NF,1:2#NF@D,1:3#NF@E,W2:4#NF,2:5#NF@F,2:6#NF,2:7#NF,2:8#VH;NF@G,FA):9#VH;NF],F@H,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8503000,
+          "name": "Zürich HB"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T16:58:00+01:00",
+          "departureTime": "2026-01-31T17:04:00+01:00"
+        },
+        "track": "34"
+      },
+      "formationShort": {
+        "formationShortString": "@A,F,F,[(LK,1:1#BHP;BZ;NF@B,1:2#NF,1:3#NF,W2:4#NF,2:5#NF@C,2:6#NF,2:7#NF,2:8#VH;NF,FA):9#VH;NF]@D,F,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8503016,
+          "name": "Zürich Flughafen"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T17:14:00+01:00",
+          "departureTime": "2026-01-31T17:15:00+01:00"
+        },
+        "track": "2"
+      },
+      "formationShort": {
+        "formationShortString": "@D,F,F,[(LK,1:1#BHP;BZ;NF,1:2#NF@C,1:3#NF,W2:4#NF,2:5#NF,2:6#NF@B,2:7#NF,2:8#VH;NF@A,FA):9#VH;NF],F,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8506000,
+          "name": "Winterthur"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T17:29:00+01:00",
+          "departureTime": "2026-01-31T17:31:00+01:00"
+        },
+        "track": "6"
+      },
+      "formationShort": {
+        "formationShortString": "@H,F,F,F@G,F,[(LK@F,1:1#BHP;BZ;NF,1:2#NF@E,1:3#NF,W2:4#NF@D,2:5#NF@C,2:6#NF,2:7#NF@B,2:8#VH;NF,FA):9#VH;NF]@A,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8506100,
+          "name": "Frauenfeld"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T17:42:00+01:00",
+          "departureTime": "2026-01-31T17:42:00+01:00"
+        },
+        "track": "2"
+      },
+      "formationShort": {
+        "formationShortString": "@H,F,F@G,F,F@F,F,[(LK@E,1:1#BHP;BZ;NF,1:2#NF@D,1:3#NF,W2:4#NF@C,2:5#NF,2:6#NF@B,2:7#NF,2:8#VH;NF@A,FA):9#VH;NF],F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8506105,
+          "name": "Weinfelden"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T17:54:00+01:00",
+          "departureTime": "2026-01-31T17:55:00+01:00"
+        },
+        "track": "1"
+      },
+      "formationShort": {
+        "formationShortString": "@D,F,F,F@C,[(LK,1:1#BHP;BZ;NF,1:2#NF@B,1:3#NF,W2:4#NF,2:5#NF@A,2:6#NF,2:7#NF,2:8#VH;NF,FA):9#VH;NF],F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8506109,
+          "name": "Amriswil"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T18:06:00+01:00",
+          "departureTime": "2026-01-31T18:06:00+01:00"
+        },
+        "track": "2"
+      },
+      "formationShort": {
+        "formationShortString": "@D,F,[(LK,1:1#BHP;BZ;NF@C,1:2#NF,1:3#NF,W2:4#NF@B,2:5#NF,2:6#NF,2:7#NF,2:8#VH;NF@A,FA):9#VH;NF],F,F,F,F,F,F",
+        "vehicleGoals": [
+          {
+            "fromVehicleAtPosition": 1,
+            "toVehicleAtPosition": 10,
+            "destinationStopPoint": {
+              "uic": 8506121,
+              "name": "Romanshorn"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scheduledStop": {
+        "stopPoint": {
+          "uic": 8506121,
+          "name": "Romanshorn"
+        },
+        "stopModifications": 0,
+        "stopType": "H",
+        "stopTime": {
+          "arrivalTime": "2026-01-31T18:12:00+01:00",
+          "departureTime": null
+        },
+        "track": "3"
+      },
+      "formationShort": {
+        "formationShortString": "@D,F,F,[(LK,1:1#BHP;BZ;NF@C,1:2#NF,1:3#NF,W2:4#NF,2:5#NF@B,2:6#NF,2:7#NF,2:8#VH;NF,FA):9#VH;NF]@A,F,F,F,F,F,F",
+        "vehicleGoals": []
+      }
+    }
+  ]
+}
