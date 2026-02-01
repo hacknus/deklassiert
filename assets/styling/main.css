@@ -63,6 +63,11 @@ body {
     border-radius: 4px;
 }
 
+.tab-list {
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+}
+
 .tab {
     flex: 0 0 auto;          /* prevent shrinking */
     padding: 0.5rem 1rem;
@@ -87,14 +92,23 @@ body {
 
 
 
-/* responsive tweaks */
 @media (max-width: 680px) {
     .app-header__title,
     .app-header__badge {
         font-size: 28px;
     }
-    .tab-list { gap: 8px; flex-wrap: wrap; }
-    .tab { padding: 8px 12px; font-size: 16px; }
+
+    .tab-list {
+        gap: 8px;
+        flex-wrap: nowrap;      /* <-- important */
+        overflow-x: auto;       /* ensure scrolling */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+        padding: 8px 12px;
+        font-size: 16px;
+    }
 }
 
 /* Centered placeholder in body */
