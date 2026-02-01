@@ -1,20 +1,23 @@
 use dioxus::prelude::*;
+use crate::get_tabs;
 
 #[component]
 pub fn Home() -> Element {
-    let tabs = vec![
-        "Brig".to_string(),
-        "Spiez".to_string(),
-        "Thun".to_string(),
-        "Bern".to_string(),
-    ];
+    let tabs_future = use_server_future(|| get_tabs())?;
 
     let mut selected = use_signal(|| 0usize);
 
+    let tabs = match &*tabs_future.read() {
+        Some(Ok(tabs)) => tabs.clone(),
+        Some(Err(_e)) => {
+            return rsx! { div { "Failed to load tabs" } };
+        }
+        None => {
+            return rsx! { div { "Loading stops..." } };
+        }
+    };
+
     rsx! {
-
-        link { rel: "stylesheet", href: asset!("/assets/styling/main.css") }
-
         div { class: "app-header",
             div { class: "app-header__title", "deklassiert" }
             div { class: "app-header__badge", "2. Klasse" }

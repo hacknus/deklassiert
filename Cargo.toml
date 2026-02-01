@@ -2,12 +2,15 @@
 name = "deklassiert"
 version = "0.1.0"
 authors = ["hacknus <linus.stoeckli@unibe.ch>"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.7.3", features = ["router"] }
+dioxus = { version = "0.7.3", features = ["router", "fullstack"] }
+once_cell = "1.21.3"
+opentransportdata = { path = "./opentransportdata", optional = true }
+tokio = "1.49.0"
 
 [features]
 default = ["web"]
@@ -17,3 +20,8 @@ web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 # The feature that are only required for the mobile = ["dioxus/mobile"] build target should be optional and only enabled in the mobile = ["dioxus/mobile"] feature
 mobile = ["dioxus/mobile"]
+
+server = [
+    "dioxus/server",
+    "opentransportdata"
+]

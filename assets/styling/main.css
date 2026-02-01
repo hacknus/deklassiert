@@ -42,34 +42,37 @@ body {
 }
 
 .tab-list {
-    list-style: none;
     display: flex;
-    gap: 12px;
-    padding: 0;
-    margin: 0;
-    align-items: center;
+    flex-direction: row;
+    gap: 0.5rem;
+
+    overflow-x: auto;        /* enable horizontal scroll */
+    overflow-y: hidden;
+    white-space: nowrap;     /* prevent wrapping */
+
+    -webkit-overflow-scrolling: touch; /* smooth scroll on iOS */
+    scrollbar-width: thin;  /* Firefox */
+}
+
+.tab-list::-webkit-scrollbar {
+    height: 6px;
+}
+
+.tab-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
 }
 
 .tab {
-    padding: 10px 16px;
+    flex: 0 0 auto;          /* prevent shrinking */
+    padding: 0.5rem 1rem;
     cursor: pointer;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 18px;
-    color: #111;
-    border-radius: 6px;
-    transition: background-color 120ms ease, color 120ms ease;
-    border: 1px solid transparent;
-}
-
-.tab:hover {
-    background: #f3f3f3;
+    user-select: none;
 }
 
 .tab.active {
-    background: #000;
-    color: #fff;
-    font-weight: 600;
-    border-color: #000;
+    border-bottom: 2px solid #007bff;
+    font-weight: bold;
 }
 
 /* content panel */
@@ -81,6 +84,8 @@ body {
     background: #fff;
     color: #111;
 }
+
+
 
 /* responsive tweaks */
 @media (max-width: 680px) {
