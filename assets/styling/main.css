@@ -119,6 +119,8 @@ body {
     overflow-y: hidden;
     white-space: nowrap;
 
+    align-items: flex-end;   /* 🔑 align bottoms */
+
     -webkit-overflow-scrolling: touch;
 }
 
@@ -164,9 +166,9 @@ body {
 /* class number drawn ON TOP of wagon */
 .class-overlay {
     position: absolute;
-    top: 50%;                 /* vertical center */
-    right: 10px;              /* move left from edge (was 6px) */
-    transform: translateY(-50%);
+    top: 50%;
+    left: 50%;                     /* anchor to center of icon */
+    transform: translate(150%, -50%);
 
     background: rgba(0,0,0,0.75);
     color: white;
@@ -176,8 +178,16 @@ body {
     padding: 6px 8px;
     border-radius: 6px;
     line-height: 1;
+    pointer-events: none;
 }
 
+.class-overlay.family-right {
+    transform: translate(80%, -50%);  /* shift slightly right */
+}
+
+.class-overlay.family-left {
+    transform: translate(150%, -50%);  /* shift slightly left */
+}
 
 @media (max-width: 680px) {
     .app-header__title,
