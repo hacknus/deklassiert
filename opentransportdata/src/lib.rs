@@ -267,6 +267,7 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
     })
 }
 
+#[cfg(feature = "native-client")]
 pub fn get_train_formation(
     train_id: i32,
     year: i32,

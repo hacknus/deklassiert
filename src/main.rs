@@ -67,6 +67,9 @@ pub fn start_tabs_reload_task() {
 
 fn main() {
     #[cfg(feature = "server")]
+    dotenv::dotenv().ok();
+
+    #[cfg(feature = "server")]
     start_tabs_reload_task();
 
     dioxus::launch(App);
