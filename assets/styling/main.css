@@ -180,7 +180,7 @@ body {
 .overlay-icons {
     position: absolute;
     top: 50%;
-    right: 6px;                 /* anchor to right edge of wagon */
+    right: 10px;                 /* anchor to right edge of wagon */
     transform: translateY(-50%);
 
     display: flex;

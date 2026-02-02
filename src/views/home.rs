@@ -16,6 +16,7 @@ const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
 const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
 const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
 const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
+const BUSINESS_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-bz.svg");
 
 #[component]
 pub fn Home() -> Element {
@@ -99,8 +100,13 @@ pub fn Home() -> Element {
                                 if car.offers.contains(&Offer::Wheelchair) {
                                     overlay_icons.push(WHEELCHAIR_SVG);
                                 }
+
                                 if car.offers.contains(&Offer::BikeHooks) {
                                     overlay_icons.push(BIKE_SVG);
+                                }
+
+                                if car.offers.contains(&Offer::BusinessZone) {
+                                    overlay_icons.push(BUSINESS_ZONE_SVG);
                                 }
 
                                 let (icon, class_label, overlay_class) = match car.vehicle_type {
