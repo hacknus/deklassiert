@@ -8,6 +8,14 @@ const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
 const FAMILY_CAR_R_ICON: Asset = asset!("/assets/IC2000_FA_r.svg");
 const CAR_ICON: Asset = asset!("/assets/car.svg");
 const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
+const FIRST_CLASS_SVG: Asset = asset!("/assets/first_class.svg");
+const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
+
+const DEKLASSIERT_CAR: Asset = asset!("/assets/deklassiert_car.svg");
+const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
+const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
+const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
+const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
 
 #[component]
 pub fn Home() -> Element {
@@ -32,127 +40,169 @@ pub fn Home() -> Element {
         .collect::<Vec<_>>();
 
     rsx! {
-            div { class: "app-header",
-                div { class: "app-header__title", "deklassiert" }
-                div { class: "app-header__badge", "2. Klasse" }
-            }
+        div { class: "app-header",
+            div { class: "app-header__title", "deklassiert" }
+            div { class: "app-header__badge", "2. Klasse" }
+        }
 
-            main { id: "hero",
-                div { class: "tabs",
-                    ul { class: "tab-list",
-                        for (i, t) in tabs.iter().enumerate() {
-                            li {
-                                key: "{i}",
-                                class: if selected() == i { "tab active" } else { "tab" },
-                                onclick: move |_| selected.set(i),
-                                "{t}"
-                            }
+        main { id: "hero",
+            div { class: "tabs",
+                ul { class: "tab-list",
+                    for (i, t) in tabs.iter().enumerate() {
+                        li {
+                            key: "{i}",
+                            class: if selected() == i { "tab active" } else { "tab" },
+                            onclick: move |_| selected.set(i),
+                            "{t}"
                         }
                     }
+                }
 
-                    div { class: "tab-panel",
-                        {
-                            let cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string);
+                div { class: "tab-panel",
+                    {
+                        let cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string);
 
-                            let stop = &train.formations_at_scheduled_stops[selected()];
+                        let stop = &train.formations_at_scheduled_stops[selected()];
 
-                            let arrival = stop
-                                .scheduled_stop
-                                .stop_time
-                                .arrival_time
-                                .map(|t| t.format("%H:%M").to_string());
+                        let arrival = stop
+                            .scheduled_stop
+                            .stop_time
+                            .arrival_time
+                            .map(|t| t.format("%H:%M").to_string());
 
-                            let departure = stop
-                                .scheduled_stop
-                                .stop_time
-                                .departure_time
-                                .map(|t| t.format("%H:%M").to_string());
+                        let departure = stop
+                            .scheduled_stop
+                            .stop_time
+                            .departure_time
+                            .map(|t| t.format("%H:%M").to_string());
 
 
-                            let mut prev_had_lowfloor = false;
+                        let mut prev_had_lowfloor = false;
 
-                            let rendered_cars: Vec<(Asset, Option<&'static str>, &'static str, Option<u32>)> = cars
-                                .iter()
-                                .filter_map(|car| {
-                                    dbg!(car); // now this runs every time selected() changes
+                        let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>)> =
+                            cars.iter().filter_map(|car| {
+                                dbg!(car);
 
-                                    let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
+                                // collect overlay icons
+                                let mut overlay_icons = Vec::new();
 
-                                   let (mut icon, mut class_label, overlay_class) = match car.vehicle_type {
-                                        VehicleType::Fictional | VehicleType::Parked => return None,
+                                let class_svg = match car.vehicle_type {
+                                    VehicleType::FirstClass | VehicleType::DiningFirstClass => Some(FIRST_CLASS_SVG),
+                                    VehicleType::SecondClass | VehicleType::DiningSecondClass | VehicleType::FamilyCar=> Some(SECOND_CLASS_SVG),
+                                    _ => None,
+                                };
 
-                                        VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
+                                if let Some(class_svg) = class_svg {
+                                    overlay_icons.push(class_svg);
+                                }
 
-                                        VehicleType::FirstClass | VehicleType::DiningFirstClass =>
-                                            (CAR_ICON, Some("1"), "class-overlay"),
+                                if car.offers.contains(&Offer::Wheelchair) {
+                                    overlay_icons.push(WHEELCHAIR_SVG);
+                                }
+                                if car.offers.contains(&Offer::BikeHooks) {
+                                    overlay_icons.push(BIKE_SVG);
+                                }
 
-                                        VehicleType::SecondClass | VehicleType::DiningSecondClass =>
-                                            (CAR_ICON, Some("2"), "class-overlay"),
+                                let (icon, class_label, overlay_class) = match car.vehicle_type {
+                                    VehicleType::Fictional | VehicleType::Parked => return None,
 
-                                        VehicleType::FamilyCar => {
-                                            if prev_had_lowfloor {
-                                                (FAMILY_CAR_R_ICON, Some("2"), "class-overlay family-right")
-                                            } else {
-                                                (FAMILY_CAR_L_ICON, Some("2"), "class-overlay family-left")
-                                            }
+                                    VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
+
+                                    VehicleType::FirstClass  =>
+                                        (CAR_ICON, Some("1"), "class-overlay"),
+
+                                    VehicleType::DiningFirstClass =>
+                                        {
+                                            overlay_icons.push(RESTAURANT_SVG);
+                                            (CAR_ICON, Some("1"), "class-overlay")
                                         }
 
-                                        VehicleType::FirstAndSecondClass =>
-                                            (CAR_ICON, Some("1/2"), "class-overlay"),
+                                    VehicleType::SecondClass =>
+                                        (CAR_ICON, Some("2"), "class-overlay"),
 
-                                        _ => (CAR_ICON, None, "class-overlay"),
-                                    };
+                                    VehicleType::DiningSecondClass =>
+                                        {
+                                            overlay_icons.push(RESTAURANT_SVG);
+                                            (CAR_ICON, Some("2"), "class-overlay")
+                                        }
 
-                                    if car.status.contains(&StatusFlag::Closed) {
-                                        icon = CLOSED_CAR_ICON;
-                                        class_label = None;
+                                    VehicleType::FamilyCar => {
+                                        overlay_icons.push(FAMILY_ZONE_SVG);
+                                        if prev_had_lowfloor {
+                                            (FAMILY_CAR_R_ICON, Some("2"), "class-overlay family-right")
+                                        } else {
+                                            (FAMILY_CAR_L_ICON, Some("2"), "class-overlay family-left")
+                                        }
                                     }
 
-                                    // update AFTER decision
-                                    prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
+                                    VehicleType::FirstAndSecondClass =>
+                                        (CAR_ICON, Some("1/2"), "class-overlay"),
 
-                                    Some((icon, class_label, overlay_class, car.order_number))
-                                })
-                                .collect();
+                                    _ => (CAR_ICON, None, "class-overlay"),
+                                };
 
-                            rsx! {
-                                div { class: "time-row",
+                                let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
 
+                                // closed overrides icon + label
+                                let (icon, overlay_icons) = if car.status.contains(&StatusFlag::Closed) {
+                                    (CLOSED_CAR_ICON, vec![])
+                                } else {
+                                    (icon, overlay_icons)
+                                };
+
+                                prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
+
+                                Some((icon, overlay_icons, is_family_right, car.order_number))
+                            })
+                            .collect();
+
+                        rsx! {
+                            div { class: "time-row",
+
+                                span { class: "time-item",
+                                    span { "Gleis {stop.scheduled_stop.track}" }
+                                }
+
+                                if let Some(a) = arrival {
                                     span { class: "time-item",
-                                        span { "Gleis {stop.scheduled_stop.track}" }
-                                    }
-
-                                    if let Some(a) = arrival {
-                                        span { class: "time-item",
-                                            img { src: CLOCK_ICON, class: "clock-icon" }
-                                            span { "Ankunft {a}" }
-                                        }
-                                    }
-
-                                    if let Some(d) = departure {
-                                        span { class: "time-item",
-                                            img { src: CLOCK_ICON, class: "clock-icon" }
-                                            span { "Abfahrt {d}" }
-                                        }
+                                        img { src: CLOCK_ICON, class: "clock-icon" }
+                                        span { "Ankunft {a}" }
                                     }
                                 }
-                                div { class: "train-row",
-                                    for (icon, class_label, overlay_class, order_number) in rendered_cars.iter() {
-                                        div { class: "vehicle",
 
-                                            div { class: "car-number",
-                                                if let Some(num) = order_number {
-                                                    "Wagen {num}"
-                                                }
+                                if let Some(d) = departure {
+                                    span { class: "time-item",
+                                        img { src: CLOCK_ICON, class: "clock-icon" }
+                                        span { "Abfahrt {d}" }
+                                    }
+                                }
+                            }
+                            div { class: "train-row",
+                                for (icon, overlay_icons, is_family_right, order_number) in rendered_cars.iter() {
+                                    div { class: "vehicle",
+
+                                        div { class: "car-number",
+                                            if let Some(num) = order_number {
+                                                "Wagen {num}"
                                             }
+                                        }
 
-                                            div { class: "vehicle-icon-wrapper",
-                                                img { src: *icon, class: "vehicle-icon" }
+                                         div { class: "vehicle-icon-wrapper",
+                                            img { src: *icon, class: "vehicle-icon" }
 
-                                                if let Some(label) = class_label {
-                                                    span {
-                                                        class: *overlay_class,
-                                                        "{label}"
+                                            if !overlay_icons.is_empty() {
+                                                div {
+                                                    class: if *is_family_right {
+                                                        "overlay-icons family-right"
+                                                    } else {
+                                                        "overlay-icons"
+                                                    },
+
+                                                    for icon in overlay_icons.iter() {
+                                                        img {
+                                                            src: *icon,
+                                                            class: "overlay-icon"
+                                                        }
                                                     }
                                                 }
                                             }
@@ -165,4 +215,5 @@ pub fn Home() -> Element {
                 }
             }
         }
+    }
 }

@@ -163,32 +163,44 @@ body {
     display: block;
 }
 
-/* class number drawn ON TOP of wagon */
-.class-overlay {
+.vehicle-icon-wrapper {
+    position: relative;
+    width: auto;
+    height: 40px;
+}
+
+.vehicle-icon {
+    width: auto;
+    height: 40px;
+    object-fit: contain;
+    display: block;
+}
+
+/* container for all overlay icons */
+.overlay-icons {
     position: absolute;
     top: 50%;
-    left: 50%;                     /* anchor to center of icon */
-    transform: translate(150%, -50%);
+    right: 6px;                 /* anchor to right edge of wagon */
+    transform: translateY(-50%);
 
-    background: rgba(0,0,0,0.75);
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
+    display: flex;
+    flex-direction: row-reverse; /* icons grow to the left */
+    gap: 6px;
 
-    padding: 6px 8px;
-    border-radius: 6px;
-    line-height: 1;
     pointer-events: none;
 }
 
-.class-overlay.family-right {
-    transform: translate(80%, -50%);  /* shift slightly right */
+/* shift icons left for right-family-car */
+.overlay-icons.family-right {
+    right: 26px;   /* tweak value until it looks perfect */
 }
 
-.class-overlay.family-left {
-    transform: translate(150%, -50%);  /* shift slightly left */
+/* each small icon */
+.overlay-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
-
 @media (max-width: 680px) {
     .app-header__title,
     .app-header__badge {
