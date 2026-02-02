@@ -1,12 +1,13 @@
 use crate::get_train;
 use dioxus::prelude::*;
-use opentransportdata::{parse_formation_short_string, Offer, VehicleType};
+use opentransportdata::{parse_formation_short_string, Offer, StatusFlag, VehicleType};
 
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
 const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
 const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
 const FAMILY_CAR_R_ICON: Asset = asset!("/assets/IC2000_FA_r.svg");
 const CAR_ICON: Asset = asset!("/assets/car.svg");
+const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
 
 #[component]
 pub fn Home() -> Element {
@@ -77,7 +78,7 @@ pub fn Home() -> Element {
 
                                     let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
 
-                                   let (icon, class_label, overlay_class) = match car.vehicle_type {
+                                   let (mut icon, mut class_label, overlay_class) = match car.vehicle_type {
                                         VehicleType::Fictional | VehicleType::Parked => return None,
 
                                         VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
@@ -101,6 +102,11 @@ pub fn Home() -> Element {
 
                                         _ => (CAR_ICON, None, "class-overlay"),
                                     };
+
+                                    if car.status.contains(&StatusFlag::Closed) {
+                                        icon = CLOSED_CAR_ICON;
+                                        class_label = None;
+                                    }
 
                                     // update AFTER decision
                                     prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
