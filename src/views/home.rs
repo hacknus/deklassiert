@@ -18,6 +18,15 @@ const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
 const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
 const BUSINESS_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-bz.svg");
 
+
+// train number 800-849 is IC8/IC81
+// train number 950-999 is IC6/IC61
+const IC8_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-8.svg");
+const IC81_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-81.svg");
+const IC6_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-6.svg");
+const IC61_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-61.svg");
+const IC_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic.svg");
+
 #[component]
 pub fn Home() -> Element {
     let train_future = use_server_future(|| get_train())?;
@@ -40,6 +49,22 @@ pub fn Home() -> Element {
         .map(|s| s.scheduled_stop.stop_point.name.clone())
         .collect::<Vec<_>>();
 
+    let train_logo = if (800..850).contains(&train.train_meta_information.train_number) {
+        if tabs.contains(&"Interlaken Ost".to_string()) {
+            IC81_SVG
+        } else {
+            IC8_SVG
+        }
+    } else if (950..1000).contains(&train.train_meta_information.train_number) {
+        if tabs.contains(&"Interlaken Ost".to_string()) {
+            IC61_SVG
+        } else {
+            IC6_SVG
+        }
+    } else {
+        IC_SVG
+    };
+
     rsx! {
         div { class: "app-header",
             div { class: "app-header__title", "deklassiert" }
@@ -48,6 +73,10 @@ pub fn Home() -> Element {
 
         main { id: "hero",
             div { class: "tabs",
+
+                div { class: "logo-row",
+                    img { src: train_logo, class: "app-logo" }
+                }
                 ul { class: "tab-list",
                     for (i, t) in tabs.iter().enumerate() {
                         li {
