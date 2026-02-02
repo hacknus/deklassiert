@@ -236,8 +236,7 @@ body {
     }
 }
 
-/* Centered placeholder in body */
-#hero {
+#trains {
     display: flex;
     justify-content: center;
     align-items: center;

@@ -266,3 +266,38 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
         offers,
     })
 }
+
+pub fn get_train_formation(
+    train_id: i32,
+    year: i32,
+    month: i32,
+    day: i32,
+    token: &str,
+) -> Result<FormationResponse, String> {
+    let base_url = "https://api.opentransportdata.swiss/formation/v2";
+
+    let url = format!(
+        "{}/formations_stop_based?evu=SBBP&operationDate={}-{}-{}&trainNumber={}",
+        base_url, year, month, day, train_id
+    );
+
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(&url)
+        .header("Authorization", token)
+        .send()
+        .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "API request failed with status: {}",
+            response.status()
+        ));
+    }
+
+    let json_text = response
+        .text()
+        .map_err(|e| format!("Failed to read response text: {}", e))?;
+
+    parse_formation_json(&json_text).map_err(|e| format!("JSON parsing error: {}", e))
+}

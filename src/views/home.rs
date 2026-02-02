@@ -71,7 +71,7 @@ pub fn Home() -> Element {
             div { class: "app-header__badge", "2. Klasse" }
         }
 
-        main { id: "hero",
+        main { id: "trains",
             div { class: "tabs",
 
                 div { class: "logo-row",
