@@ -109,6 +109,74 @@ body {
     opacity: 0.7;
 }
 
+.train-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    margin-top: 16px;
+
+    overflow-x: auto;          /* enable scrolling */
+    overflow-y: hidden;
+    white-space: nowrap;
+
+    -webkit-overflow-scrolling: touch;
+}
+
+.train-row::-webkit-scrollbar {
+    height: 6px;
+}
+.train-row::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.vehicle {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    width: auto;              /* fixed width for all vehicles */
+    flex: 0 0 auto;
+}
+
+.car-number {
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #333;
+
+    height: 16px;             /* reserve vertical space */
+    line-height: 16px;
+}
+
+.vehicle-icon-wrapper {
+    position: relative;
+    width: auto;
+    height: 40px;
+}
+
+.vehicle-icon {
+    width: auto;
+    height: 40px;
+    object-fit: contain;  /* keeps SVG aspect ratio */
+    display: block;
+}
+
+/* class number drawn ON TOP of wagon */
+.class-overlay {
+    position: absolute;
+    top: 50%;                 /* vertical center */
+    right: 10px;              /* move left from edge (was 6px) */
+    transform: translateY(-50%);
+
+    background: rgba(0,0,0,0.75);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+
+    padding: 6px 8px;
+    border-radius: 6px;
+    line-height: 1;
+}
 
 
 @media (max-width: 680px) {

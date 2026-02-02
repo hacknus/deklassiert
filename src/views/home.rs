@@ -1,7 +1,10 @@
 use crate::get_train;
 use dioxus::prelude::*;
+use opentransportdata::{parse_formation_short_string, VehicleType};
 
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
+const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
+const CAR_ICON: Asset = asset!("/assets/car.svg");
 
 #[component]
 pub fn Home() -> Element {
@@ -46,6 +49,8 @@ pub fn Home() -> Element {
 
                 div { class: "tab-panel",
                     {
+                        let cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string);
+
                         let stop = &train.formations_at_scheduled_stops[selected()];
 
                         let arrival = stop
@@ -78,6 +83,56 @@ pub fn Home() -> Element {
                                     span { class: "time-item",
                                         img { src: CLOCK_ICON, class: "clock-icon" }
                                         span { "Abfahrt {d}" }
+                                    }
+                                }
+                            }
+                            div { class: "train-row",
+                                for car in cars.iter() {
+                                    {
+                                        // decide whether to render this car
+                                        let (icon, class_label) = match car.vehicle_type {
+                                            VehicleType::Fictional | VehicleType::Parked => {
+                                                // skip rendering
+                                                (None, None)
+                                            }
+
+                                            VehicleType::Locomotive => (Some(LOCOMOTIVE_ICON), None),
+
+                                            VehicleType::FirstClass | VehicleType::DiningFirstClass =>
+                                                (Some(CAR_ICON), Some("1")),
+
+                                            VehicleType::SecondClass | VehicleType::DiningSecondClass | VehicleType::FamilyCar =>
+                                                (Some(CAR_ICON), Some("2")),
+
+                                            VehicleType::FirstAndSecondClass =>
+                                                (Some(CAR_ICON), Some("1/2")),
+
+                                            _ => (Some(CAR_ICON), None),
+                                        };
+
+                                        rsx! {
+                                            if let Some(icon) = icon {
+                                                div { class: "vehicle",
+
+                                                    // car number ABOVE icon
+                                                    div { class: "car-number",
+                                                        if let Some(num) = car.order_number {
+                                                            "Wagen {num}"
+                                                        }
+                                                    }
+
+                                                    // icon container (z-order overlay)
+                                                    div { class: "vehicle-icon-wrapper",
+                                                        img { src: icon, class: "vehicle-icon" }
+
+                                                        // class overlay INSIDE wagon
+                                                        if let Some(label) = class_label {
+                                                            span { class: "class-overlay", "{label}" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
