@@ -11,12 +11,14 @@ const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
 const FIRST_CLASS_SVG: Asset = asset!("/assets/first_class.svg");
 const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
 
-const DEKLASSIERT_CAR: Asset = asset!("/assets/deklassiert_car.svg");
+const DEKLASSIERT_CAR_ICON: Asset = asset!("/assets/deklassiert_car.svg");
 const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
 const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
 const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
 const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
 const BUSINESS_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-bz.svg");
+const RESERVED_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-r.svg");
+const GROUP_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-reisegruppe.svg");
 
 
 // train number 800-849 is IC8/IC81
@@ -138,7 +140,7 @@ pub fn Home() -> Element {
                                     overlay_icons.push(BUSINESS_ZONE_SVG);
                                 }
 
-                                let (icon, class_label, overlay_class) = match car.vehicle_type {
+                                let (mut icon, class_label, overlay_class) = match car.vehicle_type {
                                     VehicleType::Fictional | VehicleType::Parked => return None,
 
                                     VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
@@ -179,10 +181,21 @@ pub fn Home() -> Element {
                                 let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
 
                                 // closed overrides icon + label
-                                let (icon, overlay_icons) = if car.status.contains(&StatusFlag::Closed) {
-                                    (CLOSED_CAR_ICON, vec![])
-                                } else {
-                                    (icon, overlay_icons)
+                                if car.status.contains(&StatusFlag::Closed) {
+                                    icon = CLOSED_CAR_ICON;
+                                    overlay_icons = vec![];
+                                };
+
+                                if car.status.contains(&StatusFlag::Deklassiert) {
+                                    icon = DEKLASSIERT_CAR_ICON;
+                                };
+
+                                if car.status.contains(&StatusFlag::Reserved) {
+                                    overlay_icons.push(RESERVED_SVG);
+                                };
+
+                                if car.status.contains(&StatusFlag::GroupBoarding) {
+                                    overlay_icons.push(GROUP_SVG);
                                 };
 
                                 prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);

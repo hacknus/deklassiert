@@ -7,6 +7,7 @@ pub enum StatusFlag {
     GroupBoarding, // >
     Reserved,      // =
     OpenUnserved,  // %
+    Deklassiert,   // not in formation string, needs to be populated separately
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -186,6 +187,16 @@ pub fn parse_formation_short_string(input: &str) -> Vec<Vehicle> {
         vehicles.push(vehicle);
     }
 
+    // check for deklassiert vehicles and set the flag
+    for vehicle in vehicles.iter_mut() {
+        if vehicle.vehicle_type != VehicleType::Locomotive && !vehicle.offers.contains(&Offer::LowFloor) && !vehicle.offers.contains(&Offer::BikeHooks) && !vehicle.offers.contains(&Offer::BikeReserved) {
+            // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
+            if vehicle.vehicle_type != VehicleType::FirstClass && vehicle.vehicle_type != VehicleType::FirstAndSecondClass && vehicle.vehicle_type != VehicleType::DiningFirstClass {
+                vehicle.status.push(StatusFlag::Deklassiert);
+            }
+        }
+    }
+
     vehicles
 }
 
@@ -228,10 +239,16 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
 
     let (vehicle_part_raw, offers_part) = body.split_once('#').unwrap_or((body, ""));
 
-    let no_passage_left = vehicle_part_raw.contains('(');
-    let no_passage_right = vehicle_part_raw.contains(')');
+    let no_passage_left = vehicle_part_raw.contains('(') || offers_part.contains('(');
+    let no_passage_right = vehicle_part_raw.contains(')') || offers_part.contains(')');
 
     let vehicle_part_clean = vehicle_part_raw
+        .replace('(', "")
+        .replace(')', "")
+        .trim()
+        .to_string();
+
+    let offers_part_clean = offers_part
         .replace('(', "")
         .replace(')', "")
         .trim()
@@ -246,10 +263,10 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
 
     let vehicle_type = parse_vehicle_type(vehicle_type_str);
 
-    let offers = if offers_part.is_empty() {
+    let offers = if offers_part_clean.is_empty() {
         Vec::new()
     } else {
-        offers_part
+        offers_part_clean
             .split(';')
             .filter(|s| !s.is_empty())
             .map(parse_offer)

@@ -119,7 +119,8 @@ body {
     overflow-y: hidden;
     white-space: nowrap;
 
-    align-items: flex-end;   /* 🔑 align bottoms */
+    align-items: flex-end;
+    padding-bottom: 6px;
 
     -webkit-overflow-scrolling: touch;
 }
@@ -136,8 +137,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-
-    width: auto;              /* fixed width for all vehicles */
+    justify-content: flex-end;
+    height: 64px;
     flex: 0 0 auto;
 }
 
@@ -163,17 +164,23 @@ body {
     display: block;
 }
 
+.vehicle {
+    flex: 0 0 auto;
+}
+
 .vehicle-icon-wrapper {
-    position: relative;
-    width: auto;
     height: 40px;
+    width: 150px;              /* layout slot, not icon width */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .vehicle-icon {
+    height: 100%;
     width: auto;
-    height: 40px;
+    max-width: 100%;
     object-fit: contain;
-    display: block;
 }
 
 /* container for all overlay icons */
