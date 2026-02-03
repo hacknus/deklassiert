@@ -12,6 +12,7 @@ once_cell = "1.21.3"
 opentransportdata = { path = "./opentransportdata" }
 tokio = "1.49.0"
 dotenv = "0.15.0"
+chrono = "0.4.43"
 
 [features]
 default = ["web"]
@@ -20,4 +21,5 @@ web = ["dioxus/web"]
 
 server = [
     "dioxus/server",
+    "opentransportdata/native-client",
 ]

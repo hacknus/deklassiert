@@ -96,7 +96,6 @@ fn TrainView(train: FormationResponse) -> Element {
 
                     let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>)> =
                         cars.iter().filter_map(|car| {
-                            dbg!(car);
 
                             // collect overlay icons
                             let mut overlay_icons = Vec::new();

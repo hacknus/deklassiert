@@ -302,8 +302,8 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
 pub fn get_train_formation(
     train_id: i32,
     year: i32,
-    month: i32,
-    day: i32,
+    month: u32,
+    day: u32,
     token: &str,
 ) -> Result<FormationResponse, String> {
     let base_url = "https://api.opentransportdata.swiss/formation/v2";

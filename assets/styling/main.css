@@ -82,9 +82,9 @@ body {
 
 /* content panel */
 .tab-panel {
-    min-height: 240px;
+    min-height: 160px;
     border: 1px solid #e6e6e6;
-    padding: 20px;
+    padding: 16px;
     border-radius: 8px;
     background: #fff;
     color: #111;
@@ -112,7 +112,7 @@ body {
 .train-row {
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: 4px;
     margin-top: 16px;
 
     overflow-x: auto;          /* enable scrolling */
@@ -224,6 +224,10 @@ body {
     .tab {
         padding: 8px 12px;
         font-size: 16px;
+    }
+
+    .tab-panel {
+        padding: 12px;
     }
 
     .time-row {

@@ -4,7 +4,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     dotenv::dotenv().ok();
 
-    let token = std::env::var("TOKEN").expect("TOKEN not set");
+    let token = std::env::var("FORMATION_TOKEN").expect("FORMATION_TOKEN not set");
 
     let formation = get_train_formation(739,2026,2,2, &token).unwrap();
 

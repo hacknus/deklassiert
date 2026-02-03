@@ -190,12 +190,6 @@
   .z-0 {
     z-index: 0;
   }
-  .z-5 {
-    z-index: 5;
-  }
-  .z-6 {
-    z-index: 6;
-  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -226,6 +220,9 @@
   .contents {
     display: contents;
   }
+  .flex {
+    display: flex;
+  }
   .hidden {
     display: none;
   }
@@ -234,9 +231,6 @@
   }
   .table {
     display: table;
-  }
-  .h-2 {
-    height: calc(var(--spacing) * 2);
   }
   .h-3 {
     height: calc(var(--spacing) * 3);
@@ -267,6 +261,9 @@
   }
   .resize {
     resize: both;
+  }
+  .flex-wrap {
+    flex-wrap: wrap;
   }
   .truncate {
     overflow: hidden;
