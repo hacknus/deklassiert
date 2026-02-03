@@ -51,7 +51,7 @@ pub struct Vehicle {
     pub offers: Vec<Offer>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FormationResponse {
     pub vehicle_journey_type: String,
@@ -61,7 +61,7 @@ pub struct FormationResponse {
     pub formations_at_scheduled_stops: Vec<FormationAtScheduledStop>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JourneyMetaInformation {
     pub operation_date: String,
@@ -70,7 +70,7 @@ pub struct JourneyMetaInformation {
     pub sjyid: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TrainMetaInformation {
     pub train_number: u32,
@@ -78,14 +78,14 @@ pub struct TrainMetaInformation {
     pub runs: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FormationAtScheduledStop {
     pub scheduled_stop: ScheduledStop,
     pub formation_short: FormationShort,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduledStop {
     pub stop_point: StopPoint,
@@ -95,27 +95,27 @@ pub struct ScheduledStop {
     pub track: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct StopPoint {
     pub uic: u32,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StopTime {
     pub arrival_time: Option<DateTime<FixedOffset>>,
     pub departure_time: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FormationShort {
     pub formation_short_string: String,
     pub vehicle_goals: Vec<VehicleGoal>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct VehicleGoal {
     pub from_vehicle_at_position: u32,

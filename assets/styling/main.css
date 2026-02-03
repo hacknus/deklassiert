@@ -245,11 +245,14 @@ body {
 
 #trains {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;     /* full width */
+
     min-height: calc(100vh - 140px);
     max-width: 1200px;
     margin: 0 auto;
+    gap: 32px;                /* space between trains */
 }
 
 .placeholder {

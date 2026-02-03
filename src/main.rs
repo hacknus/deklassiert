@@ -29,25 +29,28 @@ const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 use std::sync::RwLock;
 
 #[cfg(feature = "server")]
-static TABS: Lazy<Arc<RwLock<FormationResponse>>> = Lazy::new(|| {
-    let data = load_tabs_from_file();
+static TRAINS: Lazy<Arc<RwLock<Vec<FormationResponse>>>> = Lazy::new(|| {
+    let data = load_trains_from_dir("test_data");
     Arc::new(RwLock::new(data))
 });
 
 #[cfg(feature = "server")]
-fn load_tabs_from_file() -> FormationResponse {
-    // todo replace string with vehicles at stop plus stop data
+fn load_trains_from_dir(dir: &str) -> Vec<FormationResponse> {
+    let mut trains = Vec::new();
 
-    let json_data = std::fs::read_to_string("test_data/test_response.json").expect("read json");
-    let formation = parse_formation_json(&json_data).unwrap();
+    let entries = std::fs::read_dir(dir).expect("read dir");
 
-    // formation
-    //     .formations_at_scheduled_stops
-    //     .into_iter()
-    //     .map(|s| s.scheduled_stop.stop_point.name)
-    //     .collect();
+    for entry in entries {
+        let path = entry.unwrap().path();
 
-    formation
+        if path.extension().and_then(|s| s.to_str()) == Some("json") {
+            let json_data = std::fs::read_to_string(&path).expect("read json");
+            let formation = parse_formation_json(&json_data).unwrap();
+            trains.push(formation);
+        }
+    }
+
+    trains
 }
 
 #[cfg(feature = "server")]
@@ -56,11 +59,11 @@ pub fn start_tabs_reload_task() {
         loop {
             std::thread::sleep(Duration::from_secs(3600));
 
-            let new_tabs = load_tabs_from_file();
-            let mut guard = TABS.write().unwrap();
-            *guard = new_tabs;
+            let new_trains = load_trains_from_dir("test_data");
+            let mut guard = TRAINS.write().unwrap();
+            *guard = new_trains;
 
-            println!("Tabs reloaded");
+            println!("Trains reloaded");
         }
     });
 }
@@ -76,8 +79,8 @@ fn main() {
 }
 
 #[server]
-async fn get_train() -> Result<FormationResponse, ServerFnError> {
-    Ok(TABS.read().unwrap().clone())
+async fn get_trains() -> Result<Vec<FormationResponse>, ServerFnError> {
+    Ok(TRAINS.read().unwrap().clone())
 }
 
 #[component]
