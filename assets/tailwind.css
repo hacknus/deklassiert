@@ -211,9 +211,6 @@
   .contents {
     display: contents;
   }
-  .flex {
-    display: flex;
-  }
   .hidden {
     display: none;
   }
@@ -243,9 +240,6 @@
   }
   .resize {
     resize: both;
-  }
-  .flex-wrap {
-    flex-wrap: wrap;
   }
   .truncate {
     overflow: hidden;

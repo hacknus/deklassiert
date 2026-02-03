@@ -191,7 +191,7 @@ pub fn parse_formation_short_string(input: &str) -> Vec<Vehicle> {
     for vehicle in vehicles.iter_mut() {
         if vehicle.vehicle_type != VehicleType::Locomotive && !vehicle.offers.contains(&Offer::LowFloor) && !vehicle.offers.contains(&Offer::BikeHooks) && !vehicle.offers.contains(&Offer::BikeReserved) {
             // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
-            if vehicle.vehicle_type != VehicleType::FirstClass && vehicle.vehicle_type != VehicleType::FirstAndSecondClass && vehicle.vehicle_type != VehicleType::DiningFirstClass {
+            if !vehicle.status.contains(&StatusFlag::Closed) && vehicle.vehicle_type != VehicleType::FirstClass && vehicle.vehicle_type != VehicleType::FirstAndSecondClass && vehicle.vehicle_type != VehicleType::DiningFirstClass {
                 vehicle.status.push(StatusFlag::Deklassiert);
             }
         }
