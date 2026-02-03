@@ -1,6 +1,12 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 
+use quick_xml::events::Event;
+// rust
+use quick_xml::Reader;
+use regex::Regex;
+use std::collections::BTreeSet;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatusFlag {
     Closed,        // -
@@ -189,9 +195,17 @@ pub fn parse_formation_short_string(input: &str) -> Vec<Vehicle> {
 
     // check for deklassiert vehicles and set the flag
     for vehicle in vehicles.iter_mut() {
-        if vehicle.vehicle_type != VehicleType::Locomotive && !vehicle.offers.contains(&Offer::LowFloor) && !vehicle.offers.contains(&Offer::BikeHooks) && !vehicle.offers.contains(&Offer::BikeReserved) {
+        if vehicle.vehicle_type != VehicleType::Locomotive
+            && !vehicle.offers.contains(&Offer::LowFloor)
+            && !vehicle.offers.contains(&Offer::BikeHooks)
+            && !vehicle.offers.contains(&Offer::BikeReserved)
+        {
             // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
-            if !vehicle.status.contains(&StatusFlag::Closed) && vehicle.vehicle_type != VehicleType::FirstClass && vehicle.vehicle_type != VehicleType::FirstAndSecondClass && vehicle.vehicle_type != VehicleType::DiningFirstClass {
+            if !vehicle.status.contains(&StatusFlag::Closed)
+                && vehicle.vehicle_type != VehicleType::FirstClass
+                && vehicle.vehicle_type != VehicleType::FirstAndSecondClass
+                && vehicle.vehicle_type != VehicleType::DiningFirstClass
+            {
                 vehicle.status.push(StatusFlag::Deklassiert);
             }
         }
@@ -318,4 +332,139 @@ pub fn get_train_formation(
         .map_err(|e| format!("Failed to read response text: {}", e))?;
 
     parse_formation_json(&json_text).map_err(|e| format!("JSON parsing error: {}", e))
+}
+
+/// Strip namespace declarations and prefixes.
+fn strip_namespaces(xml: &str) -> String {
+    let re_xmlns = Regex::new(r#"\sxmlns(:\w+)?="[^"]+""#).unwrap();
+    let re_tag = Regex::new(r#"<(/?)([A-Za-z0-9_]+):"#).unwrap();
+    let re_attr = Regex::new(r#"(\s)([A-Za-z0-9_]+):"#).unwrap();
+
+    let s = re_xmlns.replace_all(xml, "");
+    let s = re_tag.replace_all(&s, "<$1");
+    let s = re_attr.replace_all(&s, "$1");
+    s.to_string()
+}
+
+/// Event-driven parser that keeps an element stack and collects unique train numbers.
+/// Works across quick-xml versions by avoiding methods that may not exist.
+pub fn parse_train_numbers(xml: &str) -> Vec<String> {
+    let cleaned = strip_namespaces(xml);
+    let mut reader = Reader::from_str(&cleaned);
+    // do not call optional helper methods that might not exist in some quick-xml versions
+
+    let mut buf = Vec::new();
+    let mut elem_stack: Vec<String> = Vec::new();
+    let mut numbers: BTreeSet<String> = BTreeSet::new();
+
+    let now_utc = chrono::Utc::now();
+    let today = now_utc.date_naive();
+    let tomorrow = today.succ_opt().unwrap();
+    let end_of_today = DateTime::<chrono::Utc>::from_naive_utc_and_offset(tomorrow.and_hms_opt(4, 0, 0).unwrap(), chrono::Utc);
+    dbg!(end_of_today);
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                let name = str::from_utf8(e.local_name().as_ref())
+                    .unwrap_or("")
+                    .to_string();
+                elem_stack.push(name);
+            }
+            Ok(Event::End(_)) => {
+                elem_stack.pop();
+            }
+            Ok(Event::Text(e)) => {
+                if let Some(current) = elem_stack.last() {
+                    let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
+                    if !text.is_empty() {
+                        let lower = current.to_lowercase();
+                        if lower.ends_with("trainnumber") || lower.ends_with("operatingnumber") {
+                            numbers.insert(text);
+                        }
+                    }
+                }
+            }
+            Ok(Event::CData(e)) => {
+                if let Some(current) = elem_stack.last() {
+                    let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
+                    if !text.is_empty() {
+                        let lower = current.to_lowercase();
+                        if lower.ends_with("trainnumber") || lower.ends_with("operatingnumber") {
+                            numbers.insert(text);
+                        }
+                    }
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(err) => {
+                eprintln!("XML parse error: {}", err);
+                break;
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    numbers.into_iter().collect()
+}
+
+#[cfg(feature = "native-client")]
+pub fn fetch_train_numbers(token: &str) -> Result<Vec<i32>, Box<dyn std::error::Error>> {
+    let url = "https://api.opentransportdata.swiss/ojp20";
+
+    let now = chrono::Utc::now();
+    let start_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+    // Simple XML similar to the Python example; adjust StopPointRef / params as needed.
+    let xml_body = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+        <OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0">
+          <OJPRequest>
+            <siri:ServiceRequest>
+              <siri:ServiceRequestContext>
+                <siri:Language>de</siri:Language>
+              </siri:ServiceRequestContext>
+              <siri:RequestTimestamp>{}</siri:RequestTimestamp>
+              <siri:RequestorRef>MyApp</siri:RequestorRef>
+              <OJPStopEventRequest>
+                <siri:RequestTimestamp>{}</siri:RequestTimestamp>
+                <siri:MessageIdentifier>SER_1</siri:MessageIdentifier>
+                <Location>
+                  <PlaceRef>
+                    <siri:StopPointRef>8507000</siri:StopPointRef>
+                    <Name><Text>Bern</Text></Name>
+                  </PlaceRef>
+                  <DepArrTime>{}</DepArrTime>
+                </Location>
+                <Params>
+                  <NumberOfResults>1000</NumberOfResults>
+                  <StopEventType>departure</StopEventType>
+                  <IncludePreviousCalls>true</IncludePreviousCalls>
+                  <IncludeOnwardCalls>true</IncludeOnwardCalls>
+                  <UseRealtimeData>full</UseRealtimeData>
+                </Params>
+              </OJPStopEventRequest>
+            </siri:ServiceRequest>
+          </OJPRequest>
+        </OJP>
+        "#,
+        start_time, start_time, start_time
+    );
+
+    let client = reqwest::blocking::Client::builder().build()?;
+    let resp = client
+        .post(url)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("Content-Type", "application/xml")
+        .body(xml_body)
+        .send()?;
+
+    let text = resp.text()?;
+    let trains = parse_train_numbers(&text)
+        .iter()
+        .map(|n| n.parse::<i32>().unwrap())
+        .filter(|n| (*n >= 800 && *n <= 849) || (*n >= 950 && *n <= 999)) // filter for IC8/81, IC6/61
+        .collect::<Vec<i32>>();
+    Ok(trains)
 }

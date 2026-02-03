@@ -8,6 +8,8 @@ chrono = { version = "0.4.43", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 reqwest = { version = "0.13", optional = true, features = ["blocking", "json"] }
+regex = "1.12.2"
+quick-xml = "0.39.0"
 
 [dev-dependencies]
 dotenv = "0.15.0"
@@ -25,3 +27,8 @@ required-features = ["native-client"]
 [[example]]
 name = "simple"
 path = "examples/simple.rs"
+
+[[example]]
+name = "request_stop"
+path = "examples/request_stop.rs"
+required-features = ["native-client"]
