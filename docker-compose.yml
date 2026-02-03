@@ -1,0 +1,11 @@
+services:
+  deklassiert:
+    build: .
+    container_name: deklassiert
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./gallery:/usr/local/app/gallery
+      - ./data:/usr/local/app/data
+    restart: unless-stopped
