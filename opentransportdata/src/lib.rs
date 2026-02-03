@@ -346,12 +346,37 @@ fn strip_namespaces(xml: &str) -> String {
     s.to_string()
 }
 
+fn handle_text(
+    text: &str,
+    elem_stack: &Vec<String>,
+    current_train_number: &mut Option<String>,
+    current_departure_time: &mut Option<DateTime<chrono::Utc>>,
+    in_service_departure: bool,
+) {
+    if text.is_empty() {
+        return;
+    }
+
+    if let Some(current) = elem_stack.last() {
+        let lower = current.to_lowercase();
+
+        if lower.ends_with("trainnumber") || lower.ends_with("operatingnumber") {
+            *current_train_number = Some(text.to_string());
+        }
+
+        if in_service_departure && lower.ends_with("timetabledtime") {
+            if let Ok(dt) = DateTime::parse_from_rfc3339(text) {
+                *current_departure_time = Some(dt.with_timezone(&chrono::Utc));
+            }
+        }
+    }
+}
+
 /// Event-driven parser that keeps an element stack and collects unique train numbers.
 /// Works across quick-xml versions by avoiding methods that may not exist.
 pub fn parse_train_numbers(xml: &str) -> Vec<String> {
     let cleaned = strip_namespaces(xml);
     let mut reader = Reader::from_str(&cleaned);
-    // do not call optional helper methods that might not exist in some quick-xml versions
 
     let mut buf = Vec::new();
     let mut elem_stack: Vec<String> = Vec::new();
@@ -360,8 +385,16 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
     let now_utc = chrono::Utc::now();
     let today = now_utc.date_naive();
     let tomorrow = today.succ_opt().unwrap();
-    let end_of_today = DateTime::<chrono::Utc>::from_naive_utc_and_offset(tomorrow.and_hms_opt(4, 0, 0).unwrap(), chrono::Utc);
-    dbg!(end_of_today);
+    let end_of_today = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+        tomorrow.and_hms_opt(4, 0, 0).unwrap(),
+        chrono::Utc,
+    );
+
+    // per StopEvent state
+    let mut current_train_number: Option<String> = None;
+    let mut current_departure_time: Option<DateTime<chrono::Utc>> = None;
+    let mut in_this_call = false;
+    let mut in_service_departure = false;
 
     loop {
         match reader.read_event_into(&mut buf) {
@@ -369,40 +402,61 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
                 let name = str::from_utf8(e.local_name().as_ref())
                     .unwrap_or("")
                     .to_string();
+
+                match name.as_str() {
+                    "StopEvent" => {
+                        current_train_number = None;
+                        current_departure_time = None;
+                    }
+                    "ThisCall" => in_this_call = true,
+                    "ServiceDeparture" if in_this_call => in_service_departure = true,
+                    _ => {}
+                }
+
                 elem_stack.push(name);
             }
-            Ok(Event::End(_)) => {
+
+            Ok(Event::End(e)) => {
+                let name = String::from_utf8_lossy(e.local_name().as_ref()).to_string();
+
+                match name.as_str() {
+                    "StopEvent" => {
+                        if let (Some(train), Some(dep_time)) =
+                            (&current_train_number, &current_departure_time)
+                        {
+                            if *dep_time <= end_of_today {
+                                numbers.insert(train.clone());
+                            }
+                        }
+                    }
+                    "ThisCall" => in_this_call = false,
+                    "ServiceDeparture" => in_service_departure = false,
+                    _ => {}
+                }
+
                 elem_stack.pop();
             }
+
             Ok(Event::Text(e)) => {
-                if let Some(current) = elem_stack.last() {
-                    let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
-                    if !text.is_empty() {
-                        let lower = current.to_lowercase();
-                        if lower.ends_with("trainnumber") || lower.ends_with("operatingnumber") {
-                            numbers.insert(text);
-                        }
-                    }
-                }
+                let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
+                handle_text(&text, &elem_stack, &mut current_train_number, &mut current_departure_time, in_service_departure);
             }
+
             Ok(Event::CData(e)) => {
-                if let Some(current) = elem_stack.last() {
-                    let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
-                    if !text.is_empty() {
-                        let lower = current.to_lowercase();
-                        if lower.ends_with("trainnumber") || lower.ends_with("operatingnumber") {
-                            numbers.insert(text);
-                        }
-                    }
-                }
+                let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
+                handle_text(&text, &elem_stack, &mut current_train_number, &mut current_departure_time, in_service_departure);
             }
+
             Ok(Event::Eof) => break,
+
             Err(err) => {
                 eprintln!("XML parse error: {}", err);
                 break;
             }
+
             _ => {}
         }
+
         buf.clear();
     }
 
