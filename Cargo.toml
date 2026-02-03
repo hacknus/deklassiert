@@ -13,6 +13,9 @@ opentransportdata = { path = "./opentransportdata" }
 tokio = "1.49.0"
 dotenv = "0.15.0"
 chrono = "0.4.43"
+axum = { version = "0.8.8", optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["fs"], optional = true }
 
 [features]
 default = ["web"]
@@ -22,4 +25,7 @@ web = ["dioxus/web"]
 server = [
     "dioxus/server",
     "opentransportdata/native-client",
+    "dep:axum",
+    "dep:tower",
+    "dep:tower-http"
 ]

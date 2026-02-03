@@ -265,6 +265,10 @@ pub fn Home() -> Element {
         }
 
         main { id: "trains",
+            if trains.is_empty() {
+                div { "Momentan sind keine Züge verfügbar..." }
+            }
+
             for train in trains {
                 TrainView { train: train }
             }
