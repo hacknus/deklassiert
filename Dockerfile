@@ -50,8 +50,6 @@ COPY opentransportdata ./opentransportdata
 COPY assets ./assets
 COPY public ./public
 
-RUN rm -rf ./public/gallery
-
 # ---- Build web bundle ----
 RUN dx bundle --release --platform web
 
@@ -67,7 +65,6 @@ COPY --from=builder /app/target/dx/deklassiert/release/web/public ./public
 
 # runtime dirs for mounted volumes
 RUN mkdir -p /usr/local/app/data
-RUN mkdir -p /usr/local/app/gallery
 
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
