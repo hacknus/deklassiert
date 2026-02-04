@@ -6,6 +6,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./gallery:/usr/local/app/gallery
       - ./data:/usr/local/app/data
     restart: unless-stopped
