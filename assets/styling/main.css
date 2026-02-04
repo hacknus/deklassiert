@@ -41,6 +41,7 @@ body {
     gap: 18px;
 }
 
+/* css */
 .tab-list {
     display: flex;
     flex-direction: row;
@@ -52,10 +53,15 @@ body {
 
     -webkit-overflow-scrolling: touch; /* smooth scroll on iOS */
     scrollbar-width: thin;  /* Firefox */
+
+    /* reserve vertical space so horizontal scrollbar doesn't overlap the tab underline */
+    padding-bottom: 12px;
+    /* modern browsers: reserve gutter for the scrollbar */
+    scrollbar-gutter: stable;
 }
 
 .tab-list::-webkit-scrollbar {
-    height: 6px;
+    height: 8px; /* slightly thinner to fit the reserved space */
 }
 
 .tab-list::-webkit-scrollbar-thumb {
@@ -107,6 +113,25 @@ body {
     width: 16px;
     height: 16px;
     opacity: 0.7;
+}
+
+/* css */
+.logo-row {
+    display: flex;
+    align-items: center; /* vertically center image and text */
+    gap: 8px;            /* space between logo and text */
+    white-space: nowrap; /* keep text on same line as logo */
+}
+
+.app-logo {
+    height: 20px; /* adjust to desired size */
+    width: auto;
+    display: block;
+}
+
+.logo-text {
+    font-size: 16px;
+    line-height: 1;
 }
 
 .train-row {

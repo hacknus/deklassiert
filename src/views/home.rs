@@ -61,6 +61,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "logo-row",
                 img { src: train_logo, class: "app-logo" }
+                "Nr. {train.train_meta_information.train_number}"
             }
             ul { class: "tab-list",
                 for (i, t) in tabs.iter().enumerate() {
@@ -266,7 +267,7 @@ pub fn Home() -> Element {
 
         main { id: "trains",
             if trains.is_empty() {
-                div { "Momentan sind keine Züge verfügbar..." }
+                div { class: "container text-center mt-5", "Momentan sind keine Züge verfügbar..." }
             }
 
             for train in trains {
