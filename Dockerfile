@@ -46,8 +46,11 @@ COPY Dioxus.toml ./
 COPY src ./src
 COPY opentransportdata ./opentransportdata
 
-# ---- Copy assets (only affects dx bundle layer) ----
+# ---- Copy assets ----
 COPY assets ./assets
+
+# ---- Build web client for SSR (creates public/) ----
+RUN dx build --release --platform web
 
 # ---- Build server ----
 RUN cargo build --release --features server
@@ -64,6 +67,12 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 
 # Copy server binary
 COPY --from=builder /app/target/release/deklassiert ./server
+
+# Copy web output required for SSR
+COPY --from=builder /app/target/dx/deklassiert/release/web/public ./public
+
+# Copy assets
+COPY --from=builder /app/assets ./assets
 
 ENV PORT=8081
 ENV IP=0.0.0.0

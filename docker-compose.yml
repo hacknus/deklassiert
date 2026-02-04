@@ -5,8 +5,6 @@ services:
     network_mode: host
     env_file:
       - .env
-    environment:
-      - DIOXUS_BASE_PATH=deklassiert
     volumes:
       - ./data:/usr/local/app/data
     restart: unless-stopped
