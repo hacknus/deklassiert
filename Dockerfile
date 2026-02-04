@@ -48,10 +48,6 @@ COPY opentransportdata ./opentransportdata
 
 # ---- Copy assets (only affects dx bundle layer) ----
 COPY assets ./assets
-COPY public ./public
-
-# ---- Build web bundle ----
-RUN dx bundle --release --platform web
 
 # ---- Build server ----
 RUN cargo build --release --features server
@@ -60,8 +56,6 @@ RUN cargo build --release --features server
 FROM debian:trixie-slim AS runtime
 WORKDIR /usr/local/app
 
-# Copy web output
-COPY --from=builder /app/target/dx/deklassiert/release/web/public ./public
 
 # runtime dirs for mounted volumes
 RUN mkdir -p /usr/local/app/data
@@ -70,9 +64,6 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 
 # Copy server binary
 COPY --from=builder /app/target/release/deklassiert ./server
-
-# Copy web output
-COPY --from=builder /app/target/dx/deklassiert/release/web/public ./public
 
 ENV PORT=8081
 ENV IP=0.0.0.0
