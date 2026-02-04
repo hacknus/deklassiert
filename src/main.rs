@@ -9,6 +9,11 @@ use views::Home;
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
+    #[cfg(feature = "server")]
+    #[route("/deklassiert")]
+    Home {},
+
+    #[cfg(not(feature = "server"))]
     #[route("/")]
     Home {},
 }
