@@ -14,8 +14,12 @@ enum Route {
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
-const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
-const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+const MAIN_CSS: Asset = asset!("/assets/styling/main.css",
+    AssetOptions::css().with_static_head(true)
+);
+const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css",
+    AssetOptions::css().with_static_head(true)
+);
 
 use chrono::Datelike;
 

@@ -37,7 +37,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 RUN curl -L --proto '=https' --tlsv1.2 -sSf \
   https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
-RUN cargo binstall dioxus-cli --root /.cargo -y --force
+RUN cargo binstall dioxus-cli@0.7.3 --root /.cargo -y --force \
 ENV PATH="/.cargo/bin:$PATH"
 
 # ---- Copy app source (invalidates only when code changes) ----
@@ -68,11 +68,8 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 # Copy server binary
 COPY --from=builder /app/target/release/deklassiert ./server
 
-# Copy web output required for SSR
+# Copy dx web output (contains JS, WASM, CSS, assets)
 COPY --from=builder /app/target/dx/deklassiert/release/web/public ./public
-
-# Copy assets
-COPY --from=builder /app/assets ./assets
 
 ENV PORT=8081
 ENV IP=0.0.0.0
