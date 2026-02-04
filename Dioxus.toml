@@ -4,6 +4,8 @@
 
 # HTML title tag content
 title = "deklassiert"
+
+[web.app.release]
 base_path = "deklassiert"
 
 # include `assets` in web platform
