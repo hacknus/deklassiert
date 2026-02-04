@@ -4,31 +4,31 @@ use opentransportdata::{
     parse_formation_short_string, FormationResponse, Offer, StatusFlag, VehicleType,
 };
 
-const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
-const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
-const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
-const FAMILY_CAR_R_ICON: Asset = asset!("/assets/IC2000_FA_r.svg");
-const CAR_ICON: Asset = asset!("/assets/car.svg");
-const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
-const FIRST_CLASS_SVG: Asset = asset!("/assets/first_class.svg");
-const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
+const CLOCK_ICON: Asset = asset!("assets/clock.svg");
+const LOCOMOTIVE_ICON: Asset = asset!("assets/re460.svg");
+const FAMILY_CAR_L_ICON: Asset = asset!("assets/IC2000_FA_l.svg");
+const FAMILY_CAR_R_ICON: Asset = asset!("assets/IC2000_FA_r.svg");
+const CAR_ICON: Asset = asset!("assets/car.svg");
+const CLOSED_CAR_ICON: Asset = asset!("assets/closed_car.svg");
+const FIRST_CLASS_SVG: Asset = asset!("assets/first_class.svg");
+const SECOND_CLASS_SVG: Asset = asset!("assets/second_class.svg");
 
-const DEKLASSIERT_CAR_ICON: Asset = asset!("/assets/deklassiert_car.svg");
-const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
-const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
-const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
-const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
-const BUSINESS_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-bz.svg");
-const RESERVED_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-r.svg");
-const GROUP_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-reisegruppe.svg");
+const DEKLASSIERT_CAR_ICON: Asset = asset!("assets/deklassiert_car.svg");
+const RESTAURANT_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-ws.svg");
+const WHEELCHAIR_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-rs.svg");
+const BIKE_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-vo.svg");
+const FAMILY_ZONE_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-fz.svg");
+const BUSINESS_ZONE_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-bz.svg");
+const RESERVED_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-r.svg");
+const GROUP_SVG: Asset = asset!("assets/sbb-icons-main/icons/sa-reisegruppe.svg");
 
 // train number 800-849 is IC8/IC81
 // train number 950-999 is IC6/IC61
-const IC8_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-8.svg");
-const IC81_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-81.svg");
-const IC6_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-6.svg");
-const IC61_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-61.svg");
-const IC_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic.svg");
+const IC8_SVG: Asset = asset!("assets/sbb-icons-main/icons/ic-8.svg");
+const IC81_SVG: Asset = asset!("assets/sbb-icons-main/icons/ic-81.svg");
+const IC6_SVG: Asset = asset!("assets/sbb-icons-main/icons/ic-6.svg");
+const IC61_SVG: Asset = asset!("assets/sbb-icons-main/icons/ic-61.svg");
+const IC_SVG: Asset = asset!("assets/sbb-icons-main/icons/ic.svg");
 
 #[component]
 fn TrainView(train: FormationResponse) -> Element {
