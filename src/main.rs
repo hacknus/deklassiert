@@ -133,13 +133,7 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Listening on http://{}", addr);
 
-    let app = Router::new().serve_dioxus_application(
-        ServeConfig::default(),
-        App,
-    );
-
-    let router = Router::new()
-        .nest("/deklassiert", app);
+    let router = Router::new().serve_dioxus_application(ServeConfig::default(), App);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
