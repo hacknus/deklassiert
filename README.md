@@ -6,6 +6,8 @@ The project is built with [Dioxus](https://dioxuslabs.com/) and [Tailwind CSS](h
 First you need to download the SBB fahrplan icons from [here](https://digital.sbb.ch/de/foundation/assets/fpl/) and place the `sbb-icons-main` folder in the `asset` folder.
 Add your API tokens from [https://api-manager.opentransportdata.swiss](https://api-manager.opentransportdata.swiss) in the `.env` file as described in the `.env.example` file.
 
+Adjust the `base_path` in `Dioxus.toml` to `"/"` for default usage. 
+
 ### Serving Your App
 
 Run the following command in the root of your project to start developing with the default platform:
