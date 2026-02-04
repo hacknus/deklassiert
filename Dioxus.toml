@@ -4,7 +4,6 @@
 
 # HTML title tag content
 title = "deklassiert"
-base_path = "deklassiert"
 
 # include `assets` in web platform
 [web.resource]
