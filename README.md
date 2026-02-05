@@ -5,7 +5,7 @@ The project is built with [Dioxus](https://dioxuslabs.com/) and [Tailwind CSS](h
 
 First you need to download the SBB fahrplan icons from [here](https://digital.sbb.ch/de/foundation/assets/fpl/) and place the `sbb-icons-main` folder in the `asset` folder.
 Add your API tokens from [https://api-manager.opentransportdata.swiss](https://api-manager.opentransportdata.swiss) in the `.env` file as described in the `.env.example` file.
-Download the SBB fonts from [here](https://brand.sbb.ch/api/attachment/download/eyJibG9ja19yZWZlcmVuY2UiOm51bGwsImlkIjoyN30:sbb-ag:anO9oiGz0MfbniTTeviceljPzmwy46z_-mdn7SRHazY)
+Download the SBB fonts from [here](https://brand.sbb.ch/d/k7TF5BpX3B3F/markenelemente#/markenelemente/typografie)
 
 
 ### Serving Your App

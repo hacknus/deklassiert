@@ -65,7 +65,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "logo-row",
                 img { src: train_logo, class: "app-logo" }
-                "Nr. {train.train_meta_information.train_number}"
+                "Nr {train.train_meta_information.train_number}"
             }
             ul { class: "tab-list",
                 for (i, t) in tabs.iter().enumerate() {
