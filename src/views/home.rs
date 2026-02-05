@@ -6,6 +6,8 @@ use opentransportdata::{
 
 const EW_IV_FIRST_CLASS_THRESHOLD: usize = 2;
 const EW_IV_COUNT_THRESHOLD: usize = 3;
+
+const ARROW_ICON: Asset = asset!("/assets/chevron-left-medium.svg");
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
 const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
 const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
@@ -112,7 +114,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
                     let train_length = cars.len();
 
-                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>)> =
+                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>)> =
                         cars.iter().enumerate().filter_map(|(i,car)| {
 
                             // collect overlay icons
@@ -238,9 +240,21 @@ fn TrainView(train: FormationResponse) -> Element {
 
                             prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
 
-                            Some((icon, overlay_icons, is_family_right, car.order_number))
+                            Some((icon, overlay_icons, is_family_right, car.order_number, car.sector))
                         })
                         .collect();
+
+                    let mut sector_groups: Vec<(Option<char>, usize)> = Vec::new();
+                    for (_, _, _, _, sector) in rendered_cars.iter() {
+                        if let Some(last) = sector_groups.last_mut() {
+                            if last.0 == *sector {
+                                last.1 += 1;
+                                continue;
+                            }
+                        }
+                        sector_groups.push((*sector, 1));
+                    }
+                    let vehicle_count = rendered_cars.len();
 
                     rsx! {
                         div { class: "time-row",
@@ -263,31 +277,49 @@ fn TrainView(train: FormationResponse) -> Element {
                                 }
                             }
                         }
-                        div { class: "train-row",
-                            for (icon, overlay_icons, is_family_right, order_number) in rendered_cars.iter() {
-                                div { class: "vehicle",
-
-                                    div { class: "car-number",
-                                        if let Some(num) = order_number {
-                                            "Wagen {num}"
+                        // div {
+                        //         class: "time-item",
+                        //         img { src: ARROW_ICON, class: "clock-icon" }
+                        //         span { "Fahrtrichtung" }
+                        // }
+                        div { class: "formation-row",
+                            div { class: "sector-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
+                                for (sector, count) in sector_groups.iter() {
+                                    div {
+                                        class: "sector-block",
+                                        style: "grid-column: span {count};",
+                                        if let Some(letter) = sector {
+                                            span { "{letter}" }
                                         }
                                     }
+                                }
+                            }
+                            div { class: "train-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
+                                for (icon, overlay_icons, is_family_right, order_number, _) in rendered_cars.iter() {
+                                    div { class: "vehicle",
 
-                                     div { class: "vehicle-icon-wrapper",
-                                        img { src: *icon, class: "vehicle-icon" }
+                                        div { class: "car-number",
+                                            if let Some(num) = order_number {
+                                                "Wagen {num}"
+                                            }
+                                        }
 
-                                        if !overlay_icons.is_empty() {
-                                            div {
-                                                class: if *is_family_right {
-                                                    "overlay-icons family-right"
-                                                } else {
-                                                    "overlay-icons"
-                                                },
+                                         div { class: "vehicle-icon-wrapper",
+                                            img { src: *icon, class: "vehicle-icon" }
 
-                                                for icon in overlay_icons.iter() {
-                                                    img {
-                                                        src: *icon,
-                                                        class: "overlay-icon"
+                                            if !overlay_icons.is_empty() {
+                                                div {
+                                                    class: if *is_family_right {
+                                                        "overlay-icons family-right"
+                                                    } else {
+                                                        "overlay-icons"
+                                                    },
+
+                                                    for icon in overlay_icons.iter() {
+                                                        img {
+                                                            src: *icon,
+                                                            class: "overlay-icon"
+                                                        }
                                                     }
                                                 }
                                             }
@@ -387,7 +419,7 @@ pub fn Home() -> Element {
             div { class: "legend-text",
                 h2 { class: "text-left", "deklassiert?" }
                 p { class: "block text-left whitespace-pre-line",
-                    "Zu Stosszeiten werden vermehrt Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2000-Kompositionen gekoppelt. Besonders an Freitagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
+                    "Zu Stosszeiten werden vermehrt Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2020-Kompositionen gekoppelt. Besonders an Freitagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
                 }
                 p { class: "block text-left whitespace-pre-line",
                     "Mit den Daten von "
@@ -398,7 +430,7 @@ pub fn Home() -> Element {
                         class: "external-link",
                         strong { "opentransportdata" }
                     }
-                    " versuchen wir diese Wagen zu erkennen und entsprechend zu markieren."
+                    " versuchen wir diese Wagen auf den IC6/61 und IC8/81 Linien zu erkennen und entsprechend zu markieren."
                 }
                 p { class: "block text-left whitespace-pre-line",
                     "Alle Angaben ohne Gewähr."
