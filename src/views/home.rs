@@ -8,7 +8,10 @@ const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
 const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
 const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
 const FAMILY_CAR_R_ICON: Asset = asset!("/assets/IC2000_FA_r.svg");
-const CAR_ICON: Asset = asset!("/assets/car.svg");
+const IC2000_ICON: Asset = asset!("/assets/IC2000.svg");
+const EW_IV_ICON: Asset = asset!("/assets/ew_iv.svg");
+const EW_IV_STEUERWAGEN_L_ICON: Asset = asset!("/assets/ew_iv_steuerwagen_l.svg");
+const EW_IV_STEUERWAGEN_R_ICON: Asset = asset!("/assets/ew_iv_steuerwagen_r.svg");
 const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
 const FIRST_CLASS_SVG: Asset = asset!("/assets/first_class.svg");
 const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
@@ -21,6 +24,7 @@ const FAMILY_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-fz.svg");
 const BUSINESS_ZONE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-bz.svg");
 const RESERVED_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-r.svg");
 const GROUP_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-reisegruppe.svg");
+const LOW_FLOOR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-nf.svg");
 
 // train number 800-849 is IC8/IC81
 // train number 950-999 is IC6/IC61
@@ -94,9 +98,10 @@ fn TrainView(train: FormationResponse) -> Element {
 
 
                     let mut prev_had_lowfloor = false;
+                    let train_length = cars.len();
 
                     let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>)> =
-                        cars.iter().filter_map(|car| {
+                        cars.iter().enumerate().filter_map(|(i,car)| {
 
                             // collect overlay icons
                             let mut overlay_icons = Vec::new();
@@ -129,21 +134,44 @@ fn TrainView(train: FormationResponse) -> Element {
                                 VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
 
                                 VehicleType::FirstClass  =>
-                                    (CAR_ICON, Some("1"), "class-overlay"),
-
+                                    if car.offers.contains(&Offer::LowFloor) {
+                                        (IC2000_ICON, Some("1"), "class-overlay")
+                                    } else {
+                                        (EW_IV_ICON, Some("1"), "class-overlay")
+                                    },
                                 VehicleType::DiningFirstClass =>
                                     {
                                         overlay_icons.push(RESTAURANT_SVG);
-                                        (CAR_ICON, Some("1"), "class-overlay")
+                                        if car.offers.contains(&Offer::LowFloor) {
+                                            (IC2000_ICON, Some("1"), "class-overlay")
+                                        } else {
+                                            (EW_IV_ICON, Some("1"), "class-overlay")
+                                        }
                                     }
 
                                 VehicleType::SecondClass =>
-                                    (CAR_ICON, Some("2"), "class-overlay"),
+                                    if car.offers.contains(&Offer::LowFloor) {
+                                        (IC2000_ICON, Some("2"), "class-overlay")
+                                    } else {
+                                        if i == 0 {
+                                            // this is the first car, so show the steuerwagen!
+                                            (EW_IV_STEUERWAGEN_L_ICON, Some("2"), "class-overlay")
+                                        } else if i == train_length - 1 {
+                                            // this is the last car, so show the steuerwagen!
+                                            (EW_IV_STEUERWAGEN_R_ICON, Some("2"), "class-overlay")
+                                        } else {
+                                            (EW_IV_ICON, Some("2"), "class-overlay")
+                                        }
+                                    },
 
                                 VehicleType::DiningSecondClass =>
                                     {
                                         overlay_icons.push(RESTAURANT_SVG);
-                                        (CAR_ICON, Some("2"), "class-overlay")
+                                        if car.offers.contains(&Offer::LowFloor) {
+                                            (IC2000_ICON, Some("2"), "class-overlay")
+                                        } else {
+                                            (EW_IV_ICON, Some("2"), "class-overlay")
+                                        }
                                     }
 
                                 VehicleType::FamilyCar => {
@@ -156,9 +184,14 @@ fn TrainView(train: FormationResponse) -> Element {
                                 }
 
                                 VehicleType::FirstAndSecondClass =>
-                                    (CAR_ICON, Some("1/2"), "class-overlay"),
-
-                                _ => (CAR_ICON, None, "class-overlay"),
+                                    {
+                                        if car.offers.contains(&Offer::LowFloor) {
+                                            (IC2000_ICON, Some("1/2"), "class-overlay")
+                                        } else {
+                                            (EW_IV_ICON, Some("1/2"), "class-overlay")
+                                        }
+                                    },
+                                _ => (IC2000_ICON, None, "class-overlay"),
                             };
 
                             let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
@@ -179,6 +212,16 @@ fn TrainView(train: FormationResponse) -> Element {
 
                             if car.status.contains(&StatusFlag::GroupBoarding) {
                                 overlay_icons.push(GROUP_SVG);
+                            };
+
+                            if car.offers.contains(&Offer::FamilyZone) {
+                                if !overlay_icons.contains(&FAMILY_ZONE_SVG) {
+                                    overlay_icons.push(FAMILY_ZONE_SVG);
+                                }
+                            };
+
+                            if car.offers.contains(&Offer::LowFloor) {
+                                overlay_icons.push(LOW_FLOOR_SVG);
                             };
 
                             prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
@@ -259,6 +302,24 @@ pub fn Home() -> Element {
         None => return rsx! { div { "Loading trains..." } },
     };
 
+    let legend_items: Vec<(Asset, &str)> = vec![
+        (LOCOMOTIVE_ICON, "Lokomotive"),
+        (FAMILY_CAR_L_ICON, "Familienwagen"),
+        (IC2000_ICON, "Wagen"),
+        (DEKLASSIERT_CAR_ICON, "Deklassiert"),
+        (CLOSED_CAR_ICON, "Geschlossener Wagen"),
+        (FIRST_CLASS_SVG, "1. Klasse"),
+        (SECOND_CLASS_SVG, "2. Klasse"),
+        (LOW_FLOOR_SVG, "Niederflur"),
+        (RESTAURANT_SVG, "Restaurant"),
+        (WHEELCHAIR_SVG, "Rollstuhl"),
+        (BIKE_SVG, "Velo"),
+        (FAMILY_ZONE_SVG, "Familienzone"),
+        (BUSINESS_ZONE_SVG, "Business Zone"),
+        (RESERVED_SVG, "Reserviert"),
+        (GROUP_SVG, "Gruppenboarding"),
+    ];
+
     rsx! {
         div { class: "app-header",
             div { class: "app-header__title", "deklassiert" }
@@ -272,6 +333,18 @@ pub fn Home() -> Element {
 
             for train in trains {
                 TrainView { train: train }
+            }
+        }
+
+        section { class: "legend",
+            h2 { "Legende" }
+            div { class: "legend-grid",
+                for (icon, label) in legend_items {
+                    div { class: "legend-item",
+                        img { src: icon, class: "legend-icon" }
+                        span { class: "legend-label", "{label}" }
+                    }
+                }
             }
         }
     }
