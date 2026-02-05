@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
+use serde::de::Deserializer;
 
 use quick_xml::events::Event;
 // rust
@@ -60,6 +61,7 @@ pub struct Vehicle {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FormationResponse {
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub vehicle_journey_type: String,
     pub last_update: DateTime<FixedOffset>,
     pub journey_meta_information: JourneyMetaInformation,
@@ -70,9 +72,11 @@ pub struct FormationResponse {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JourneyMetaInformation {
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub operation_date: String,
 
     #[serde(rename = "SJYID")]
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub sjyid: String,
 }
 
@@ -80,7 +84,9 @@ pub struct JourneyMetaInformation {
 #[serde(rename_all = "camelCase")]
 pub struct TrainMetaInformation {
     pub train_number: u32,
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub to_code: String,
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub runs: String,
 }
 
@@ -96,14 +102,17 @@ pub struct FormationAtScheduledStop {
 pub struct ScheduledStop {
     pub stop_point: StopPoint,
     pub stop_modifications: u32,
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub stop_type: String,
     pub stop_time: StopTime,
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub track: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct StopPoint {
     pub uic: u32,
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub name: String,
 }
 
@@ -117,6 +126,7 @@ pub struct StopTime {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FormationShort {
+    #[serde(default, deserialize_with = "null_to_empty")]
     pub formation_short_string: String,
     pub vehicle_goals: Vec<VehicleGoal>,
 }
@@ -127,6 +137,13 @@ pub struct VehicleGoal {
     pub from_vehicle_at_position: u32,
     pub to_vehicle_at_position: u32,
     pub destination_stop_point: StopPoint,
+}
+
+fn null_to_empty<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 pub fn parse_formation_json(json: &str) -> Result<FormationResponse, serde_json::Error> {
@@ -613,7 +630,7 @@ pub fn fetch_train_numbers(token: &str) -> Result<Vec<i32>, Box<dyn std::error::
     let trains = parse_train_numbers(&text)
         .iter()
         .map(|n| n.parse::<i32>().unwrap())
-        .filter(|n| (*n >= 800 && *n <= 849) || (*n >= 950 && *n <= 999)) // filter for IC8/81, IC6/61
+        .filter(|n| (*n >= 600 && *n <= 649) || (*n >= 800 && *n <= 849) || (*n >= 950 && *n <= 999)) // filter for IC8/81, IC6/61
         .collect::<Vec<i32>>();
     Ok(trains)
 }

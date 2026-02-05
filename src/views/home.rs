@@ -30,6 +30,7 @@ const RESERVED_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-r.svg");
 const GROUP_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-reisegruppe.svg");
 const LOW_FLOOR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-nf.svg");
 
+// train number 600-649 is IC6/IC61
 // train number 800-849 is IC8/IC81
 // train number 950-999 is IC6/IC61
 const IC8_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic-8.svg");
@@ -54,7 +55,9 @@ fn TrainView(train: FormationResponse) -> Element {
         } else {
             IC8_SVG
         }
-    } else if (950..1000).contains(&train.train_meta_information.train_number) {
+    } else if (950..1000).contains(&train.train_meta_information.train_number)
+        || (600..650).contains(&train.train_meta_information.train_number)
+    {
         if tabs.contains(&"Interlaken Ost".to_string()) {
             IC61_SVG
         } else {
