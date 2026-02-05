@@ -355,23 +355,14 @@ fn TrainView(train: FormationResponse) -> Element {
 }
 
 #[component]
-pub fn Home() -> Element {
+pub fn All() -> Element {
     let trains_future = use_server_future(|| get_trains())?;
 
-    let mut trains = match &*trains_future.read() {
+    let trains = match &*trains_future.read() {
         Some(Ok(trains)) => trains.clone(),
         Some(Err(_)) => return rsx! { div { "Failed to load trains" } },
         None => return rsx! { div { "Loading trains..." } },
     };
-
-    // filter trains to only those with deklassiert coaches
-    trains = trains.iter().filter(|train| {
-        train.formations_at_scheduled_stops.iter().any(|stop| {
-            let vehicles = parse_formation_short_string(&stop.formation_short.formation_short_string,
-                EW_IV_FIRST_CLASS_THRESHOLD, EW_IV_COUNT_THRESHOLD);
-            vehicles.iter().filter(|v| v.status.contains(&StatusFlag::Deklassiert)).count() > 0
-        })
-    }).cloned().collect();
 
     let legend_items: Vec<(Asset, &str, &str, bool)> = vec![
         (
@@ -419,11 +410,7 @@ pub fn Home() -> Element {
 
         main { id: "trains",
             if trains.is_empty() {
-                div { class: "container text-center mt-10",
-                    "Momentan sind leider keine deklassierten Wagen verfügbar, du kannst aber alle aktuellen IC6/61 und IC8/81 "
-                    a { href: "/all", strong { "hier " } }
-                    "anschauen."
-                }
+                div { class: "container text-center mt-10", "Momentan sind keine Züge verfügbar..." }
             }
 
             for train in trains {

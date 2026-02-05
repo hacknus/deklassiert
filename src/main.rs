@@ -4,13 +4,15 @@ use std::{sync::Arc, time::Duration};
 mod components;
 mod views;
 
-use views::Home;
+use views::{All, Home};
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
 enum Route {
     #[route("/")]
     Home {},
+    #[route("/all")]
+    All {}
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");

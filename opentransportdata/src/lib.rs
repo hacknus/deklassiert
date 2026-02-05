@@ -191,6 +191,8 @@ pub fn scan_for_deklassiert_coaches(
 
     for vehicle in vehicles.iter_mut() {
         if vehicle.vehicle_type != VehicleType::Locomotive
+            && vehicle.vehicle_type != VehicleType::Fictional
+            && vehicle.vehicle_type != VehicleType::Parked
             && !vehicle.offers.contains(&Offer::LowFloor)
             && !vehicle.offers.contains(&Offer::BikeHooks)
             && !vehicle.offers.contains(&Offer::BikeReserved)
@@ -201,7 +203,9 @@ pub fn scan_for_deklassiert_coaches(
                 && vehicle.vehicle_type != VehicleType::FirstAndSecondClass
                 && vehicle.vehicle_type != VehicleType::DiningFirstClass
             {
-                vehicle.status.push(StatusFlag::Deklassiert);
+                if !vehicle.status.contains(&StatusFlag::Deklassiert) {
+                    vehicle.status.push(StatusFlag::Deklassiert);
+                }
             }
         }
     }
@@ -246,6 +250,8 @@ pub fn scan_for_deklassiert_coaches(
         for i in 0..vehicles.len() {
             if vehicles[i].vehicle_type == VehicleType::Locomotive
                 || vehicles[i].status.contains(&StatusFlag::Closed)
+                || vehicles[i].vehicle_type == VehicleType::Fictional
+                || vehicles[i].vehicle_type == VehicleType::Parked
             {
                 continue;
             }
