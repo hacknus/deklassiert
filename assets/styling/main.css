@@ -144,6 +144,7 @@ body {
 .formation-row {
     --vehicle-width: 150px;
     --vehicle-gap: 4px;
+    --arrow-width: 20px;
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
@@ -250,6 +251,22 @@ body {
     font-size: 12px;
     color: #111;
     background: #fafafa;
+}
+
+.sector-block--first {
+    position: relative;
+    padding-left: var(--arrow-width);
+}
+
+.sector-arrow {
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--arrow-width);
 }
 
 @media (max-width: 680px) {

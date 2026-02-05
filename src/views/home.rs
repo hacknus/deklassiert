@@ -277,17 +277,17 @@ fn TrainView(train: FormationResponse) -> Element {
                                 }
                             }
                         }
-                        // div {
-                        //         class: "time-item",
-                        //         img { src: ARROW_ICON, class: "clock-icon" }
-                        //         span { "Fahrtrichtung" }
-                        // }
                         div { class: "formation-row",
                             div { class: "sector-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
-                                for (sector, count) in sector_groups.iter() {
+                                for (i, (sector, count)) in sector_groups.iter().enumerate() {
                                     div {
-                                        class: "sector-block",
+                                        class: if i == 0 { "sector-block sector-block--first" } else { "sector-block" },
                                         style: "grid-column: span {count};",
+                                        if i == 0 {
+                                            span { class: "sector-arrow",
+                                                img { src: ARROW_ICON, class: "clock-icon" }
+                                            }
+                                        }
                                         if let Some(letter) = sector {
                                             span { "{letter}" }
                                         }
