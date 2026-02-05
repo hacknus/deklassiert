@@ -43,7 +43,25 @@ const IC_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic.svg");
 
 #[component]
 fn TrainView(train: FormationResponse) -> Element {
-    let mut selected = use_signal(|| 0usize);
+    let mut selected = use_signal(|| {
+        let now = chrono::Utc::now();
+        train
+            .formations_at_scheduled_stops
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                let time = s
+                    .scheduled_stop
+                    .stop_time
+                    .departure_time
+                    .or(s.scheduled_stop.stop_time.arrival_time)?;
+                let diff = (time.with_timezone(&chrono::Utc) - now).num_seconds().abs();
+                Some((i, diff))
+            })
+            .min_by_key(|(_, diff)| *diff)
+            .map(|(i, _)| i)
+            .unwrap_or(0)
+    });
 
     let tabs = train
         .formations_at_scheduled_stops
