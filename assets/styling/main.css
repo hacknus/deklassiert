@@ -364,3 +364,24 @@ body {
     border-top: 1px solid #e6e6e6;
     margin: 16px 0;
 }
+
+/* File: assets/styling/main.css - add these rules */
+
+.legend-text a {
+    color: #0b66c3;                /* distinct link color */
+    text-decoration: underline;    /* make links obvious */
+    font-weight: 600;              /* slightly bolder than body */
+    display: inline;               /* keep inline with text */
+}
+
+.legend-text strong {
+    font-weight: 700;              /* ensure strong is visually stronger */
+    color: inherit;                /* keep color context (or set specific) */
+}
+
+/* optional: reduce paragraph font-size or change color inside legend */
+.legend-text p {
+    margin: 0;
+    color: #333;                   /* slightly muted body color */
+    line-height: 1.45;
+}

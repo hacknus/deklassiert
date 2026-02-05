@@ -84,17 +84,23 @@ pub fn start_tabs_reload_task() {
                 for train in trains {
                     println!("Loading formation for train {}", train);
 
-                    if let Ok(formation) = opentransportdata::get_train_formation(
+                    match opentransportdata::get_train_formation(
                         train,
                         year,
                         month,
                         day,
                         &formation_token,
                     ) {
-                        new_trains.push(formation);
+                        Err(e) => {
+                            println!("Error loading formation for train {}: {}", train, e);
+                        }
+                        Ok(formation) => {
+                            new_trains.push(formation);
 
-                        let mut guard = TRAINS.write().unwrap();
-                        *guard = new_trains.clone();
+                            let mut guard = TRAINS.write().unwrap();
+                            *guard = new_trains.clone();
+                        }
+
                     }
 
                     std::thread::sleep(Duration::from_secs(12));

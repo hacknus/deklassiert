@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
         let parsed =
-            parse_formation_short_string(&stop.formation_short.formation_short_string);
+            parse_formation_short_string(&stop.formation_short.formation_short_string, 2, 3);
 
         for vehicle in parsed {
             println!("{:#?}", vehicle);

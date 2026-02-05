@@ -4,6 +4,8 @@ use opentransportdata::{
     parse_formation_short_string, FormationResponse, Offer, StatusFlag, VehicleType,
 };
 
+const EW_IV_FIRST_CLASS_THRESHOLD: usize = 2;
+const EW_IV_COUNT_THRESHOLD: usize = 3;
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
 const LOCOMOTIVE_ICON: Asset = asset!("/assets/re460.svg");
 const FAMILY_CAR_L_ICON: Asset = asset!("/assets/IC2000_FA_l.svg");
@@ -18,7 +20,6 @@ const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
 // const DEKLASSIERT_CAR_ICON: Asset = asset!("/assets/deklassiert_car.svg");
 
 const DEKLASSIERT_EW_IV_ICON: Asset = asset!("/assets/deklassiert_ew_iv.svg");
-
 
 const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
 const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
@@ -83,7 +84,8 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "tab-panel",
                 {
-                    let cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string);
+                    let mut cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string,
+                    EW_IV_FIRST_CLASS_THRESHOLD, EW_IV_COUNT_THRESHOLD);
 
                     let stop = &train.formations_at_scheduled_stops[selected()];
 
@@ -101,6 +103,10 @@ fn TrainView(train: FormationResponse) -> Element {
 
 
                     let mut prev_had_lowfloor = false;
+
+                    // filter out fictional and parked cars
+                    cars = cars.iter().filter(|c| c.vehicle_type != VehicleType::Fictional && c.vehicle_type != VehicleType::Parked).cloned().collect::<Vec<_>>();
+
                     let train_length = cars.len();
 
                     let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>)> =
@@ -158,10 +164,10 @@ fn TrainView(train: FormationResponse) -> Element {
                                     } else {
                                         if i == 0 {
                                             // this is the first car, so show the steuerwagen!
-                                            (EW_IV_STEUERWAGEN_L_ICON, Some("2"), "class-overlay")
+                                            (EW_IV_STEUERWAGEN_L_ICON, Some("2"), "class-overlay family-left")
                                         } else if i == train_length - 1 {
                                             // this is the last car, so show the steuerwagen!
-                                            (EW_IV_STEUERWAGEN_R_ICON, Some("2"), "class-overlay")
+                                            (EW_IV_STEUERWAGEN_R_ICON, Some("2"), "class-overlay family-right")
                                         } else {
                                             (EW_IV_ICON, Some("2"), "class-overlay")
                                         }
@@ -197,7 +203,7 @@ fn TrainView(train: FormationResponse) -> Element {
                                 _ => (IC2000_ICON, None, "class-overlay"),
                             };
 
-                            let is_family_right = matches!(car.vehicle_type, VehicleType::FamilyCar) && prev_had_lowfloor;
+                            let is_family_right = icon == FAMILY_CAR_R_ICON  || icon == EW_IV_STEUERWAGEN_R_ICON;
 
                             // closed overrides icon + label
                             if car.status.contains(&StatusFlag::Closed) {
@@ -306,11 +312,31 @@ pub fn Home() -> Element {
     };
 
     let legend_items: Vec<(Asset, &str, &str, bool)> = vec![
-        (LOCOMOTIVE_ICON, "Lokomotive", "legend-icon legend-icon--car", true),
-        (FAMILY_CAR_L_ICON, "Familienwagen", "legend-icon legend-icon--car", true),
+        (
+            LOCOMOTIVE_ICON,
+            "Lokomotive",
+            "legend-icon legend-icon--car",
+            true,
+        ),
+        (
+            FAMILY_CAR_L_ICON,
+            "Familienwagen",
+            "legend-icon legend-icon--car",
+            true,
+        ),
         (IC2000_ICON, "Wagen", "legend-icon legend-icon--car", true),
-        (DEKLASSIERT_EW_IV_ICON, "Deklassiert", "legend-icon legend-icon--car", true),
-        (CLOSED_CAR_ICON, "Geschlossener Wagen", "legend-icon legend-icon--car", true),
+        (
+            DEKLASSIERT_EW_IV_ICON,
+            "Deklassiert",
+            "legend-icon legend-icon--car",
+            true,
+        ),
+        (
+            CLOSED_CAR_ICON,
+            "Geschlossener Wagen",
+            "legend-icon legend-icon--car",
+            true,
+        ),
         (FIRST_CLASS_SVG, "1. Klasse", "legend-icon", false),
         (SECOND_CLASS_SVG, "2. Klasse", "legend-icon", false),
         (LOW_FLOOR_SVG, "Niederflur", "legend-icon", false),
@@ -331,7 +357,7 @@ pub fn Home() -> Element {
 
         main { id: "trains",
             if trains.is_empty() {
-                div { class: "container text-center mt-5", "Momentan sind keine Züge verfügbar..." }
+                div { class: "container text-center mt-10", "Momentan sind keine Züge verfügbar..." }
             }
 
             for train in trains {
@@ -356,21 +382,32 @@ pub fn Home() -> Element {
             }
             hr { class: "legend-separator" }
             div { class: "legend-text",
-                h2 { "deklassiert?" }
-                p {
+                h2 { class: "text-left", "deklassiert?" }
+                p { class: "block text-left whitespace-pre-line",
                     "Zu Stosszeiten werden vermehrt Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2000-Kompositionen gekoppelt. Besonders an Freitagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
-                    }
-                p {
+                }
+                p { class: "block text-left whitespace-pre-line",
                     "Mit den Daten von "
-                    a { href: "https://opentransportdata.swiss/de/", "opentransportdata" }
+                    a {
+                        href: "https://opentransportdata.swiss/de/",
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        class: "external-link",
+                        strong { "opentransportdata" }
+                    }
                     " versuchen wir diese Wagen zu erkennen und entsprechend zu markieren."
                 }
-                p {
+                p { class: "block text-left whitespace-pre-line",
+                    "Alle Angaben ohne Gewähr."
+                }
+                p { class: "block text-left whitespace-pre-line",
                     "Diese Webseite wurde in Rust geschrieben und der Quellcode ist auf "
-                    a { href: "https://github.com/hacknus/deklassiert", "GitHub" }
+                    a { href: "https://github.com/hacknus/deklassiert", strong { "GitHub" } }
                     " verfügbar."
                 }
-                p { "© 2026 Linus Leo Stöckli" }
+                p { class: "block text-left whitespace-pre-line",
+                    "© 2026 Linus Leo Stöckli"
+                }
             }
         }
     }

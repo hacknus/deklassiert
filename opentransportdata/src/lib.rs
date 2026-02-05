@@ -165,7 +165,106 @@ fn parse_offer(s: &str) -> Offer {
     }
 }
 
-pub fn parse_formation_short_string(input: &str) -> Vec<Vehicle> {
+pub fn scan_for_deklassiert_coaches(
+    vehicles: &mut Vec<Vehicle>,
+    ew_iv_first_class_threshold: usize,
+    ew_iv_count_threshold: usize,
+) {
+    // check for deklassiert vehicles and set the flag
+
+    for vehicle in vehicles.iter_mut() {
+        if vehicle.vehicle_type != VehicleType::Locomotive
+            && !vehicle.offers.contains(&Offer::LowFloor)
+            && !vehicle.offers.contains(&Offer::BikeHooks)
+            && !vehicle.offers.contains(&Offer::BikeReserved)
+        {
+            // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
+            if !vehicle.status.contains(&StatusFlag::Closed)
+                && vehicle.vehicle_type != VehicleType::FirstClass
+                && vehicle.vehicle_type != VehicleType::FirstAndSecondClass
+                && vehicle.vehicle_type != VehicleType::DiningFirstClass
+            {
+                vehicle.status.push(StatusFlag::Deklassiert);
+            }
+        }
+    }
+
+    // if the train has:
+    // - more than three EW IV
+    // - less than two 1. class coaches
+    // - no EW IV steuerwagen
+    //
+    // then: mark the 2. class EW IV next to the 1. class as deklassiert.
+
+    let ew_iv = vehicles
+        .iter()
+        .filter(|v| !v.offers.contains(&Offer::LowFloor))
+        .collect::<Vec<&Vehicle>>();
+
+    // let ew_iv_second_class_count = ew_iv
+    //     .iter()
+    //     .filter(|v| v.vehicle_type == VehicleType::SecondClass)
+    //     .count();
+
+    let ew_iv_first_class_count = ew_iv
+        .iter()
+        .filter(|v| v.vehicle_type == VehicleType::FirstClass)
+        .count();
+
+    let train_has_EW_IV_steuerwagen = vehicles.iter().enumerate().any(|(i, v)| {
+        v.vehicle_type == VehicleType::SecondClass // second class
+            && (i == 0 || i == vehicles.len() -1) // at one end of the train
+            && !v.offers.contains(&Offer::LowFloor) // EW IV
+    });
+
+    let train_has_IC2000_family_coach = vehicles.iter().enumerate().any(|(i, v)| {
+        v.vehicle_type == VehicleType::FamilyCar // FA
+    });
+
+    if ew_iv.len() > ew_iv_count_threshold
+        && ew_iv_first_class_count < ew_iv_first_class_threshold
+        && !train_has_EW_IV_steuerwagen
+        && train_has_IC2000_family_coach
+    {
+        for i in 0..vehicles.len() {
+            if vehicles[i].vehicle_type == VehicleType::Locomotive
+                || vehicles[i].status.contains(&StatusFlag::Closed)
+            {
+                continue;
+            }
+            if !vehicles[i].offers.contains(&Offer::LowFloor) {
+                // check if the next is a first class EW_IV coach
+                if let Some(next) = vehicles.get(i + 1) {
+                    if next.vehicle_type == VehicleType::FirstClass
+                        && !next.offers.contains(&Offer::LowFloor)
+                    {
+                        if !vehicles[i].status.contains(&StatusFlag::Deklassiert) {
+                            vehicles[i].status.push(StatusFlag::Deklassiert);
+                        }
+                    }
+                }
+                // check if the previous is a first class EW_IV coach
+                if i > 0
+                    && let Some(previous) = vehicles.get(i - 1)
+                {
+                    if previous.vehicle_type == VehicleType::FirstClass
+                        && !previous.offers.contains(&Offer::LowFloor)
+                    {
+                        if !vehicles[i].status.contains(&StatusFlag::Deklassiert) {
+                            vehicles[i].status.push(StatusFlag::Deklassiert);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn parse_formation_short_string(
+    input: &str,
+    ew_iv_first_class_threshold: usize,
+    ew_iv_count_threshold: usize
+) -> Vec<Vehicle> {
     let mut vehicles = Vec::new();
     let mut buf = String::new();
     let mut current_sector: Option<char> = None;
@@ -193,23 +292,7 @@ pub fn parse_formation_short_string(input: &str) -> Vec<Vehicle> {
         vehicles.push(vehicle);
     }
 
-    // check for deklassiert vehicles and set the flag
-    for vehicle in vehicles.iter_mut() {
-        if vehicle.vehicle_type != VehicleType::Locomotive
-            && !vehicle.offers.contains(&Offer::LowFloor)
-            && !vehicle.offers.contains(&Offer::BikeHooks)
-            && !vehicle.offers.contains(&Offer::BikeReserved)
-        {
-            // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
-            if !vehicle.status.contains(&StatusFlag::Closed)
-                && vehicle.vehicle_type != VehicleType::FirstClass
-                && vehicle.vehicle_type != VehicleType::FirstAndSecondClass
-                && vehicle.vehicle_type != VehicleType::DiningFirstClass
-            {
-                vehicle.status.push(StatusFlag::Deklassiert);
-            }
-        }
-    }
+    scan_for_deklassiert_coaches(&mut vehicles, ew_iv_first_class_threshold, ew_iv_count_threshold);
 
     vehicles
 }
@@ -439,12 +522,24 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
 
             Ok(Event::Text(e)) => {
                 let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
-                handle_text(&text, &elem_stack, &mut current_train_number, &mut current_departure_time, in_service_departure);
+                handle_text(
+                    &text,
+                    &elem_stack,
+                    &mut current_train_number,
+                    &mut current_departure_time,
+                    in_service_departure,
+                );
             }
 
             Ok(Event::CData(e)) => {
                 let text = String::from_utf8_lossy(e.as_ref()).trim().to_string();
-                handle_text(&text, &elem_stack, &mut current_train_number, &mut current_departure_time, in_service_departure);
+                handle_text(
+                    &text,
+                    &elem_stack,
+                    &mut current_train_number,
+                    &mut current_departure_time,
+                    in_service_departure,
+                );
             }
 
             Ok(Event::Eof) => break,

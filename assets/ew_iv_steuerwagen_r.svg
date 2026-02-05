@@ -1,24 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Ebene_1" xmlns="http://www.w3.org/2000/svg" width="230mm" height="68.4mm" version="1.1" viewBox="0 0 652 193.8">
-  <!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136)  -->
+<svg id="Ebene_1" data-name="Ebene 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 618.94 163.36">
   <defs>
     <style>
-      .st0 {
-        stroke: #000;
-        stroke-width: 2.2px;
+      .cls-1 {
+        stroke: #010101;
+        stroke-width: 2px;
       }
 
-      .st0, .st1 {
+      .cls-1, .cls-2 {
         fill: none;
         stroke-miterlimit: 10;
       }
 
-      .st1 {
-        stroke: #010101;
-        stroke-width: 1.9px;
+      .cls-2 {
+        stroke: #000;
+        stroke-width: 2.34px;
       }
     </style>
   </defs>
-  <polyline class="st0" points="529.4 35.7 561.2 51.5 595.1 71.3 601.3 77.6 631.7 120.5 635 126.7 636.6 131 636.6 135.4 636.6 140.7 635.9 146.7 635 150.5 633.3 154.6 620.5 177.5 413.7 177.5"/>
-  <path class="st1" d="M530.1,35.7H31.2c-6.3,0-11.3,4.5-11.3,10v121.8c0,5.5,5.1,10,11.3,10h590"/>
+  <polyline class="cls-2" points="510.62 1.02 542.4 18.98 576.26 41.45 582.45 48.61 612.89 97.45 616.14 104.45 617.77 109.33 617.77 114.38 617.77 120.4 617.12 127.24 616.14 131.47 614.52 136.19 601.71 162.19 394.9 162.19"/>
+  <path class="cls-1" d="M511.23,1.02H12.34C6.08,1.02,1,6.1,1,12.36v138.49c0,6.26,5.08,11.34,11.34,11.34h590.05"/>
 </svg>
