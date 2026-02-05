@@ -67,7 +67,7 @@ pub fn start_tabs_reload_task() {
         let formation_token = std::env::var("FORMATION_TOKEN").expect("TOKEN not set");
         let ojp_token = std::env::var("OJP_TOKEN").expect("set OJP_TOKEN env var");
 
-        loop {
+        'main_loop: loop {
             let trains = opentransportdata::fetch_train_numbers(&ojp_token);
 
             let now_utc = chrono::Utc::now();
@@ -92,6 +92,11 @@ pub fn start_tabs_reload_task() {
                         &formation_token,
                     ) {
                         Err(e) => {
+                            if e.contains("Too Many Requests") {
+                                println!("Rate limit hit, sleeping for 60 seconds");
+                                std::thread::sleep(Duration::from_secs(60));
+                                continue 'main_loop;
+                            }
                             println!("Error loading formation for train {}: {}", train, e);
                         }
                         Ok(formation) => {
