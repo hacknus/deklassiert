@@ -345,3 +345,22 @@ body {
 .legend-label--top {
     text-align: center;
 }
+
+.legend-text {
+    max-width: 1200px;
+    margin: 16px auto 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-text p {
+    margin: 0;
+}
+
+.legend-separator {
+    border: none;
+    border-top: 1px solid #e6e6e6;
+    margin: 16px 0;
+}

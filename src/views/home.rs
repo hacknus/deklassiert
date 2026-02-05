@@ -15,8 +15,11 @@ const EW_IV_STEUERWAGEN_R_ICON: Asset = asset!("/assets/ew_iv_steuerwagen_r.svg"
 const CLOSED_CAR_ICON: Asset = asset!("/assets/closed_car.svg");
 const FIRST_CLASS_SVG: Asset = asset!("/assets/first_class.svg");
 const SECOND_CLASS_SVG: Asset = asset!("/assets/second_class.svg");
+// const DEKLASSIERT_CAR_ICON: Asset = asset!("/assets/deklassiert_car.svg");
 
-const DEKLASSIERT_CAR_ICON: Asset = asset!("/assets/deklassiert_car.svg");
+const DEKLASSIERT_EW_IV_ICON: Asset = asset!("/assets/deklassiert_ew_iv.svg");
+
+
 const RESTAURANT_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-ws.svg");
 const WHEELCHAIR_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-rs.svg");
 const BIKE_SVG: Asset = asset!("/assets/sbb-icons-main/icons/sa-vo.svg");
@@ -203,7 +206,7 @@ fn TrainView(train: FormationResponse) -> Element {
                             };
 
                             if car.status.contains(&StatusFlag::Deklassiert) {
-                                icon = DEKLASSIERT_CAR_ICON;
+                                icon = DEKLASSIERT_EW_IV_ICON;
                             };
 
                             if car.status.contains(&StatusFlag::Reserved) {
@@ -306,7 +309,7 @@ pub fn Home() -> Element {
         (LOCOMOTIVE_ICON, "Lokomotive", "legend-icon legend-icon--car", true),
         (FAMILY_CAR_L_ICON, "Familienwagen", "legend-icon legend-icon--car", true),
         (IC2000_ICON, "Wagen", "legend-icon legend-icon--car", true),
-        (DEKLASSIERT_CAR_ICON, "Deklassiert", "legend-icon legend-icon--car", true),
+        (DEKLASSIERT_EW_IV_ICON, "Deklassiert", "legend-icon legend-icon--car", true),
         (CLOSED_CAR_ICON, "Geschlossener Wagen", "legend-icon legend-icon--car", true),
         (FIRST_CLASS_SVG, "1. Klasse", "legend-icon", false),
         (SECOND_CLASS_SVG, "2. Klasse", "legend-icon", false),
@@ -317,7 +320,7 @@ pub fn Home() -> Element {
         (FAMILY_ZONE_SVG, "Familienzone", "legend-icon", false),
         (BUSINESS_ZONE_SVG, "Business Zone", "legend-icon", false),
         (RESERVED_SVG, "Reserviert", "legend-icon", false),
-        (GROUP_SVG, "Gruppenboarding", "legend-icon", false),
+        (GROUP_SVG, "Gruppenreservation", "legend-icon", false),
     ];
 
     rsx! {
@@ -350,6 +353,24 @@ pub fn Home() -> Element {
                         }
                     }
                 }
+            }
+            hr { class: "legend-separator" }
+            div { class: "legend-text",
+                h2 { "deklassiert?" }
+                p {
+                    "Zu Stosszeiten werden vermehrt Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2000-Kompositionen gekoppelt. Besonders an Freitagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
+                    }
+                p {
+                    "Mit den Daten von "
+                    a { href: "https://opentransportdata.swiss/de/", "opentransportdata" }
+                    " versuchen wir diese Wagen zu erkennen und entsprechend zu markieren."
+                }
+                p {
+                    "Diese Webseite wurde in Rust geschrieben und der Quellcode ist auf "
+                    a { href: "https://github.com/hacknus/deklassiert", "GitHub" }
+                    " verfügbar."
+                }
+                p { "© 2026 Linus Leo Stöckli" }
             }
         }
     }

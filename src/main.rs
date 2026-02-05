@@ -114,43 +114,43 @@ async fn get_trains() -> Result<Vec<FormationResponse>, ServerFnError> {
 
 #[component]
 fn App() -> Element {
-    let font_css = format!(
-        r#"
-@font-face {{
-    font-family: "SBB Web";
-    src:
-        url("{SBB_WEB_ROMAN_WOFF2}") format("woff2"),
-        url("{SBB_WEB_ROMAN_WOFF}") format("woff");
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}}
-@font-face {{
-    font-family: "SBB Web";
-    src:
-        url("{SBB_WEB_ITALIC_WOFF2}") format("woff2"),
-        url("{SBB_WEB_ITALIC_WOFF}") format("woff");
-    font-weight: 400;
-    font-style: italic;
-    font-display: swap;
-}}
-@font-face {{
-    font-family: "SBB Web";
-    src:
-        url("{SBB_WEB_BOLD_WOFF2}") format("woff2"),
-        url("{SBB_WEB_BOLD_WOFF}") format("woff");
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}}
-"#
-    );
+//     let font_css = format!(
+//         r#"
+// @font-face {{
+//     font-family: "SBB Web";
+//     src:
+//         url("{SBB_WEB_ROMAN_WOFF2}") format("woff2"),
+//         url("{SBB_WEB_ROMAN_WOFF}") format("woff");
+//     font-weight: 400;
+//     font-style: normal;
+//     font-display: swap;
+// }}
+// @font-face {{
+//     font-family: "SBB Web";
+//     src:
+//         url("{SBB_WEB_ITALIC_WOFF2}") format("woff2"),
+//         url("{SBB_WEB_ITALIC_WOFF}") format("woff");
+//     font-weight: 400;
+//     font-style: italic;
+//     font-display: swap;
+// }}
+// @font-face {{
+//     font-family: "SBB Web";
+//     src:
+//         url("{SBB_WEB_BOLD_WOFF2}") format("woff2"),
+//         url("{SBB_WEB_BOLD_WOFF}") format("woff");
+//     font-weight: 700;
+//     font-style: normal;
+//     font-display: swap;
+// }}
+// "#
+//     );
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
-        document::Style { "{font_css}" }
+        // document::Style { "{font_css}" }
 
         Router::<Route> {}
     }
