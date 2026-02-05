@@ -20,12 +20,12 @@ const MAIN_CSS: Asset = asset!("/assets/styling/main.css",
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css",
     AssetOptions::css().with_static_head(true)
 );
-const SBB_WEB_ROMAN_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Roman.woff2");
-const SBB_WEB_ROMAN_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Roman.woff");
-const SBB_WEB_ITALIC_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Italic.woff2");
-const SBB_WEB_ITALIC_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Italic.woff");
-const SBB_WEB_BOLD_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Bold.woff2");
-const SBB_WEB_BOLD_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Bold.woff");
+// const SBB_WEB_ROMAN_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Roman.woff2");
+// const SBB_WEB_ROMAN_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Roman.woff");
+// const SBB_WEB_ITALIC_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Italic.woff2");
+// const SBB_WEB_ITALIC_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Italic.woff");
+// const SBB_WEB_BOLD_WOFF2: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Bold.woff2");
+// const SBB_WEB_BOLD_WOFF: Asset = asset!("/assets/Grafikdateien-SBB-Font/WEB/SBBWeb-Bold.woff");
 
 use chrono::Datelike;
 
