@@ -302,22 +302,22 @@ pub fn Home() -> Element {
         None => return rsx! { div { "Loading trains..." } },
     };
 
-    let legend_items: Vec<(Asset, &str)> = vec![
-        (LOCOMOTIVE_ICON, "Lokomotive"),
-        (FAMILY_CAR_L_ICON, "Familienwagen"),
-        (IC2000_ICON, "Wagen"),
-        (DEKLASSIERT_CAR_ICON, "Deklassiert"),
-        (CLOSED_CAR_ICON, "Geschlossener Wagen"),
-        (FIRST_CLASS_SVG, "1. Klasse"),
-        (SECOND_CLASS_SVG, "2. Klasse"),
-        (LOW_FLOOR_SVG, "Niederflur"),
-        (RESTAURANT_SVG, "Restaurant"),
-        (WHEELCHAIR_SVG, "Rollstuhl"),
-        (BIKE_SVG, "Velo"),
-        (FAMILY_ZONE_SVG, "Familienzone"),
-        (BUSINESS_ZONE_SVG, "Business Zone"),
-        (RESERVED_SVG, "Reserviert"),
-        (GROUP_SVG, "Gruppenboarding"),
+    let legend_items: Vec<(Asset, &str, &str, bool)> = vec![
+        (LOCOMOTIVE_ICON, "Lokomotive", "legend-icon legend-icon--car", true),
+        (FAMILY_CAR_L_ICON, "Familienwagen", "legend-icon legend-icon--car", true),
+        (IC2000_ICON, "Wagen", "legend-icon legend-icon--car", true),
+        (DEKLASSIERT_CAR_ICON, "Deklassiert", "legend-icon legend-icon--car", true),
+        (CLOSED_CAR_ICON, "Geschlossener Wagen", "legend-icon legend-icon--car", true),
+        (FIRST_CLASS_SVG, "1. Klasse", "legend-icon", false),
+        (SECOND_CLASS_SVG, "2. Klasse", "legend-icon", false),
+        (LOW_FLOOR_SVG, "Niederflur", "legend-icon", false),
+        (RESTAURANT_SVG, "Restaurant", "legend-icon", false),
+        (WHEELCHAIR_SVG, "Rollstuhl", "legend-icon", false),
+        (BIKE_SVG, "Velo", "legend-icon", false),
+        (FAMILY_ZONE_SVG, "Familienzone", "legend-icon", false),
+        (BUSINESS_ZONE_SVG, "Business Zone", "legend-icon", false),
+        (RESERVED_SVG, "Reserviert", "legend-icon", false),
+        (GROUP_SVG, "Gruppenboarding", "legend-icon", false),
     ];
 
     rsx! {
@@ -339,10 +339,15 @@ pub fn Home() -> Element {
         section { class: "legend",
             h2 { "Legende" }
             div { class: "legend-grid",
-                for (icon, label) in legend_items {
-                    div { class: "legend-item",
-                        img { src: icon, class: "legend-icon" }
-                        span { class: "legend-label", "{label}" }
+                for (icon, label, class_name, is_stacked) in legend_items {
+                    div { class: if is_stacked { "legend-item legend-item--stacked" } else { "legend-item" },
+                        if is_stacked {
+                            span { class: "legend-label legend-label--top", "{label}" }
+                            img { src: icon, class: "{class_name}" }
+                        } else {
+                            img { src: icon, class: "{class_name}" }
+                            span { class: "legend-label", "{label}" }
+                        }
                     }
                 }
             }
