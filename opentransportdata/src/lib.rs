@@ -1,6 +1,6 @@
 use chrono::{DateTime, FixedOffset};
-use serde::{Deserialize, Serialize};
 use serde::de::Deserializer;
+use serde::{Deserialize, Serialize};
 
 use quick_xml::events::Event;
 // rust
@@ -187,6 +187,14 @@ pub fn scan_for_deklassiert_coaches(
     ew_iv_first_class_threshold: usize,
     ew_iv_count_threshold: usize,
 ) {
+    // if there are no locomotives (TT train), do not mark any vehicles as deklassiert
+    let train_has_locomotive = vehicles
+        .iter()
+        .any(|v| v.vehicle_type == VehicleType::Locomotive);
+    if !train_has_locomotive {
+        return;
+    }
+
     // check for deklassiert vehicles and set the flag
 
     for vehicle in vehicles.iter_mut() {
@@ -219,7 +227,13 @@ pub fn scan_for_deklassiert_coaches(
 
     let ew_iv = vehicles
         .iter()
-        .filter(|v| !v.offers.contains(&Offer::LowFloor))
+        .filter(|v| {
+            !v.status.contains(&StatusFlag::Closed)
+                && !v.offers.contains(&Offer::LowFloor)
+                && v.vehicle_type != VehicleType::Locomotive
+                && v.vehicle_type != VehicleType::Fictional
+                && v.vehicle_type != VehicleType::Parked
+        })
         .collect::<Vec<&Vehicle>>();
 
     // let ew_iv_second_class_count = ew_iv
@@ -286,7 +300,7 @@ pub fn scan_for_deklassiert_coaches(
 pub fn parse_formation_short_string(
     input: &str,
     ew_iv_first_class_threshold: usize,
-    ew_iv_count_threshold: usize
+    ew_iv_count_threshold: usize,
 ) -> Vec<Vehicle> {
     let mut vehicles = Vec::new();
     let mut buf = String::new();
@@ -315,7 +329,11 @@ pub fn parse_formation_short_string(
         vehicles.push(vehicle);
     }
 
-    scan_for_deklassiert_coaches(&mut vehicles, ew_iv_first_class_threshold, ew_iv_count_threshold);
+    scan_for_deklassiert_coaches(
+        &mut vehicles,
+        ew_iv_first_class_threshold,
+        ew_iv_count_threshold,
+    );
 
     vehicles
 }
@@ -636,7 +654,9 @@ pub fn fetch_train_numbers(token: &str) -> Result<Vec<i32>, Box<dyn std::error::
     let trains = parse_train_numbers(&text)
         .iter()
         .map(|n| n.parse::<i32>().unwrap())
-        .filter(|n| (*n >= 600 && *n <= 649) || (*n >= 800 && *n <= 849) || (*n >= 950 && *n <= 999)) // filter for IC8/81, IC6/61
+        .filter(|n| {
+            (*n >= 600 && *n <= 649) || (*n >= 800 && *n <= 849) || (*n >= 950 && *n <= 999)
+        }) // filter for IC8/81, IC6/61
         .collect::<Vec<i32>>();
     Ok(trains)
 }

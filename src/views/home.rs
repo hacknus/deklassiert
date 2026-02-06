@@ -450,7 +450,7 @@ pub fn Home() -> Element {
             div { class: "legend-text",
                 h2 { class: "text-left", "deklassiert?" }
                 p { class: "block text-left whitespace-pre-line",
-                    "Zu Stosszeiten werden vermehrt Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2020-Kompositionen gekoppelt. Besonders an Freitagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
+                    "Zu Stosszeiten werden vermehrt zusätzliche Wagen (Einheitswagen IV) zur Unterstützung an bestehende IC2020-Kompositionen gekoppelt. Besonders an Feiertagen und Wochenenden werden einzelne EW IV der 1. Klasse als Wagen der 2. Klasse geführt, also deklassiert."
                 }
                 p { class: "block text-left whitespace-pre-line",
                     "Mit den Daten von "
