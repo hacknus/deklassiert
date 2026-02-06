@@ -246,10 +246,20 @@ pub fn scan_for_deklassiert_coaches(
         .filter(|v| v.vehicle_type == VehicleType::FirstClass)
         .count();
 
-    let train_has_EW_IV_steuerwagen = vehicles.iter().enumerate().any(|(i, v)| {
+    let vehicles_filtered = vehicles
+        .iter()
+        .filter(|v| {
+            v.vehicle_type != VehicleType::Fictional && v.vehicle_type != VehicleType::Parked
+        })
+        .collect::<Vec<&Vehicle>>();
+
+    let train_has_EW_IV_steuerwagen = vehicles_filtered.iter().enumerate().any(|(i, v)| {
         v.vehicle_type == VehicleType::SecondClass // second class
-            && (i == 0 || i == vehicles.len() -1) // at one end of the train
+            && (i == 0 || i == vehicles_filtered.len() -1) // at one end of the train
             && !v.offers.contains(&Offer::LowFloor) // EW IV
+            && v.vehicle_type != VehicleType::Fictional
+            && v.vehicle_type != VehicleType::Parked
+            && !v.status.contains(&StatusFlag::Closed)
     });
 
     let train_has_IC2000_family_coach = vehicles.iter().enumerate().any(|(i, v)| {

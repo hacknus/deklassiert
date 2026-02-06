@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let token = std::env::var("FORMATION_TOKEN").expect("FORMATION_TOKEN not set");
 
-    let formation = get_train_formation(739,2026,2,2, &token).unwrap();
+    let formation = get_train_formation(629,2026,2,6, &token).unwrap();
 
     println!("Train number: {}", formation.train_meta_information.train_number);
 
