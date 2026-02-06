@@ -202,8 +202,10 @@ pub fn scan_for_deklassiert_coaches(
             && vehicle.vehicle_type != VehicleType::Fictional
             && vehicle.vehicle_type != VehicleType::Parked
             && !vehicle.offers.contains(&Offer::LowFloor)
-            && !vehicle.offers.contains(&Offer::BikeHooks)
+            && (!vehicle.offers.contains(&Offer::BikeHooks)
             && !vehicle.offers.contains(&Offer::BikeReserved)
+            || vehicle.offers.contains(&Offer::BusinessZone)
+            || vehicle.vehicle_type == VehicleType::DiningFirstClass)
         {
             // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
             if !vehicle.status.contains(&StatusFlag::Closed)
