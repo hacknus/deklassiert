@@ -72,13 +72,13 @@ pub fn start_tabs_reload_task() {
         loop {
             let mut trains = opentransportdata::fetch_train_numbers(&ojp_token);
 
-            trains = Ok(vec![808]);
+            trains = Ok(vec![70107]);
 
             let now_utc = chrono::Utc::now();
             let today = now_utc.date_naive();
             let year = today.year();
             let month = today.month();
-            let day = today.day() + 1;
+            let day = today.day();
 
             let mut updated_trains: Vec<FormationResponse> = Vec::new();
             let mut existing_by_number = {
