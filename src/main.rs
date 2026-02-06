@@ -70,9 +70,7 @@ pub fn start_tabs_reload_task() {
         let ojp_token = std::env::var("OJP_TOKEN").expect("set OJP_TOKEN env var");
 
         loop {
-            let mut trains = opentransportdata::fetch_train_numbers(&ojp_token);
-
-            trains = Ok(vec![70107]);
+            let trains = opentransportdata::fetch_train_numbers(&ojp_token);
 
             let now_utc = chrono::Utc::now();
             let today = now_utc.date_naive();
