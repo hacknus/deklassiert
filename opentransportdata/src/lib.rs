@@ -257,8 +257,6 @@ pub fn scan_for_deklassiert_coaches(
         v.vehicle_type == VehicleType::SecondClass // second class
             && (i == 0 || i == vehicles_filtered.len() -1) // at one end of the train
             && !v.offers.contains(&Offer::LowFloor) // EW IV
-            && v.vehicle_type != VehicleType::Fictional
-            && v.vehicle_type != VehicleType::Parked
             && !v.status.contains(&StatusFlag::Closed)
     });
 
