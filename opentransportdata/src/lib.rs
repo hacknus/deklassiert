@@ -6,7 +6,7 @@ use quick_xml::events::Event;
 // rust
 use quick_xml::Reader;
 use regex::Regex;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatusFlag {
@@ -56,6 +56,7 @@ pub struct Vehicle {
     pub vehicle_type: VehicleType,
     pub order_number: Option<u32>,
     pub offers: Vec<Offer>,
+    pub vehicle_identifier: Option<FormationVehicle>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -67,6 +68,8 @@ pub struct FormationResponse {
     pub journey_meta_information: JourneyMetaInformation,
     pub train_meta_information: TrainMetaInformation,
     pub formations_at_scheduled_stops: Vec<FormationAtScheduledStop>,
+    #[serde(default)]
+    pub formations: Vec<Formation>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -139,6 +142,70 @@ pub struct VehicleGoal {
     pub destination_stop_point: StopPoint,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Formation {
+    #[serde(default)]
+    pub formation_vehicles: Vec<FormationVehicle>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FormationVehicle {
+    #[serde(default)]
+    pub vehicle_identifier: Option<VehicleIdentifier>,
+    pub position: u32,
+    pub number: u32,
+    #[serde(default)]
+    pub vehicle_properties: Option<VehicleProperties>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct VehicleProperties {
+    #[serde(default)]
+    pub trolley_status: Option<TrolleyStatus>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum TrolleyStatus {
+    #[serde(rename = "GeschlossenTechnisch")]
+    GeschlossenTechnisch,
+    #[serde(rename = "GeschlossenBetrieblich")]
+    GeschlossenBetrieblich,
+    #[serde(rename = "RestaurantUnbedient")]
+    RestaurantUnbedient,
+    #[serde(rename = "RestaurantUnbedientDeklassiert")]
+    RestaurantUnbedientDeklassiert,
+    #[serde(rename = "Deklassiert")]
+    Deklassiert,
+    #[serde(rename = "Normal")]
+    Normal,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VehicleIdentifier {
+    #[serde(default)]
+    pub type_code: Option<u32>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub type_code_name: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub build_type_code: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub country_code: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub vehicle_number: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub check_number: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub evn: Option<String>,
+    #[serde(default, deserialize_with = "null_to_empty_opt")]
+    pub parent_evn: Option<String>,
+    #[serde(default)]
+    pub position: Option<u32>,
+}
+
 fn null_to_empty<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
@@ -146,8 +213,39 @@ where
     Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
 }
 
+fn null_to_empty_opt<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<String>::deserialize(deserializer)?.filter(|s| !s.is_empty()))
+}
+
 pub fn parse_formation_json(json: &str) -> Result<FormationResponse, serde_json::Error> {
     serde_json::from_str::<FormationResponse>(json)
+}
+
+pub fn get_vehicle_information(
+    train: &FormationResponse,
+) -> HashMap<u32, (bool, FormationVehicle)> {
+    let mut map = HashMap::new();
+    for formation in train.formations.iter() {
+        for vehicle in formation.formation_vehicles.iter() {
+            match vehicle
+                .vehicle_properties
+                .as_ref()
+                .and_then(|props| props.trolley_status.clone())
+            {
+                Some(TrolleyStatus::Deklassiert) => {
+                    map.insert(vehicle.number, (true, vehicle.clone()));
+                }
+                _ => {
+                    map.insert(vehicle.number, (false, vehicle.clone()));
+                }
+            }
+        }
+    }
+
+    map
 }
 
 fn parse_vehicle_type(s: &str) -> VehicleType {
@@ -182,135 +280,10 @@ fn parse_offer(s: &str) -> Offer {
     }
 }
 
-pub fn scan_for_deklassiert_coaches(
-    vehicles: &mut Vec<Vehicle>,
-    ew_iv_first_class_threshold: usize,
-    ew_iv_count_threshold: usize,
-) {
-    // if there are no locomotives (TT train), do not mark any vehicles as deklassiert
-    let train_has_locomotive = vehicles
-        .iter()
-        .any(|v| v.vehicle_type == VehicleType::Locomotive);
-    if !train_has_locomotive {
-        return;
-    }
-
-    // check for deklassiert vehicles and set the flag
-
-    for vehicle in vehicles.iter_mut() {
-        if vehicle.vehicle_type != VehicleType::Locomotive
-            && vehicle.vehicle_type != VehicleType::Fictional
-            && vehicle.vehicle_type != VehicleType::Parked
-            && !vehicle.offers.contains(&Offer::LowFloor)
-            && (!vehicle.offers.contains(&Offer::BikeHooks)
-            && !vehicle.offers.contains(&Offer::BikeReserved)
-            || vehicle.offers.contains(&Offer::BusinessZone)
-            || vehicle.vehicle_type == VehicleType::DiningFirstClass)
-        {
-            // this is an EW IV or EuroCity coach. If there are no bike mounts, this is likely a deklassiert vehicle
-            if !vehicle.status.contains(&StatusFlag::Closed)
-                && vehicle.vehicle_type != VehicleType::FirstClass
-                && vehicle.vehicle_type != VehicleType::FirstAndSecondClass
-                && vehicle.vehicle_type != VehicleType::DiningFirstClass
-            {
-                if !vehicle.status.contains(&StatusFlag::Deklassiert) {
-                    vehicle.status.push(StatusFlag::Deklassiert);
-                }
-            }
-        }
-    }
-
-    // if the train has:
-    // - more than three EW IV
-    // - less than two 1. class coaches
-    // - no EW IV steuerwagen
-    //
-    // then: mark the 2. class EW IV next to the 1. class as deklassiert.
-
-    let ew_iv = vehicles
-        .iter()
-        .filter(|v| {
-            !v.status.contains(&StatusFlag::Closed)
-                && !v.offers.contains(&Offer::LowFloor)
-                && v.vehicle_type != VehicleType::Locomotive
-                && v.vehicle_type != VehicleType::Fictional
-                && v.vehicle_type != VehicleType::Parked
-        })
-        .collect::<Vec<&Vehicle>>();
-
-    // let ew_iv_second_class_count = ew_iv
-    //     .iter()
-    //     .filter(|v| v.vehicle_type == VehicleType::SecondClass)
-    //     .count();
-
-    let ew_iv_first_class_count = ew_iv
-        .iter()
-        .filter(|v| v.vehicle_type == VehicleType::FirstClass)
-        .count();
-
-    let vehicles_filtered = vehicles
-        .iter()
-        .filter(|v| {
-            v.vehicle_type != VehicleType::Fictional && v.vehicle_type != VehicleType::Parked
-        })
-        .collect::<Vec<&Vehicle>>();
-
-    let train_has_EW_IV_steuerwagen = vehicles_filtered.iter().enumerate().any(|(i, v)| {
-        v.vehicle_type == VehicleType::SecondClass // second class
-            && (i == 0 || i == vehicles_filtered.len() -1) // at one end of the train
-            && !v.offers.contains(&Offer::LowFloor) // EW IV
-            && !v.status.contains(&StatusFlag::Closed)
-    });
-
-    let train_has_IC2000_family_coach = vehicles.iter().enumerate().any(|(i, v)| {
-        v.vehicle_type == VehicleType::FamilyCar // FA
-    });
-
-    if ew_iv.len() > ew_iv_count_threshold
-        && ew_iv_first_class_count < ew_iv_first_class_threshold
-        && !train_has_EW_IV_steuerwagen
-        && train_has_IC2000_family_coach
-    {
-        for i in 0..vehicles.len() {
-            if vehicles[i].vehicle_type == VehicleType::Locomotive
-                || vehicles[i].status.contains(&StatusFlag::Closed)
-                || vehicles[i].vehicle_type == VehicleType::Fictional
-                || vehicles[i].vehicle_type == VehicleType::Parked
-            {
-                continue;
-            }
-            if !vehicles[i].offers.contains(&Offer::LowFloor) {
-                // check if the next is a first class EW_IV coach
-                if let Some(next) = vehicles.get(i + 1) {
-                    if next.vehicle_type == VehicleType::FirstClass
-                        && !next.offers.contains(&Offer::LowFloor)
-                    {
-                        if !vehicles[i].status.contains(&StatusFlag::Deklassiert) {
-                            vehicles[i].status.push(StatusFlag::Deklassiert);
-                        }
-                    }
-                }
-                // check if the previous is a first class EW_IV coach
-                if i > 0
-                    && let Some(previous) = vehicles.get(i - 1)
-                {
-                    if previous.vehicle_type == VehicleType::FirstClass
-                        && !previous.offers.contains(&Offer::LowFloor)
-                    {
-                        if !vehicles[i].status.contains(&StatusFlag::Deklassiert) {
-                            vehicles[i].status.push(StatusFlag::Deklassiert);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 pub fn parse_formation_short_string(
     input: &str,
-    ew_iv_first_class_threshold: usize,
-    ew_iv_count_threshold: usize,
+    vehicle_information: &HashMap<u32, (bool, FormationVehicle)>,
 ) -> Vec<Vehicle> {
     let mut vehicles = Vec::new();
     let mut buf = String::new();
@@ -339,11 +312,27 @@ pub fn parse_formation_short_string(
         vehicles.push(vehicle);
     }
 
-    scan_for_deklassiert_coaches(
-        &mut vehicles,
-        ew_iv_first_class_threshold,
-        ew_iv_count_threshold,
-    );
+    for (i, vehicle) in vehicles.iter_mut().enumerate() {
+        if false && let Some(coach_number) = vehicle.order_number {
+            if let Some((deklassiert, identifier)) = vehicle_information.get(&coach_number) {
+                if *deklassiert && !vehicle.status.contains(&StatusFlag::Deklassiert) {
+                    vehicle.status.push(StatusFlag::Deklassiert);
+                }
+                vehicle.vehicle_identifier = Some(identifier.clone());
+            }
+        } else {
+            // could be a locomotive
+
+            for (_number, (deklassiert, identifier)) in vehicle_information.iter() {
+                if identifier.position == i as u32 {
+                    if *deklassiert && !vehicle.status.contains(&StatusFlag::Deklassiert) {
+                        vehicle.status.push(StatusFlag::Deklassiert);
+                    }
+                    vehicle.vehicle_identifier = Some(identifier.clone());
+                }
+            }
+        }
+    }
 
     vehicles
 }
@@ -429,6 +418,7 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
         vehicle_type,
         order_number,
         offers,
+        vehicle_identifier: None,
     })
 }
 
@@ -443,7 +433,7 @@ pub fn get_train_formation(
     let base_url = "https://api.opentransportdata.swiss/formation/v2";
 
     let url = format!(
-        "{}/formations_stop_based?evu=SBBP&operationDate={}-{}-{}&trainNumber={}",
+        "{}/formations_full?evu=SBBP&operationDate={}-{}-{}&trainNumber={}",
         base_url, year, month, day, train_id
     );
 

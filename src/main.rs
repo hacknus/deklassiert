@@ -78,8 +78,15 @@ pub fn start_tabs_reload_task() {
             let month = today.month();
             let day = today.day();
 
-            // TODO: remove old trains and update the ones that have changed instead of reloading all formations every time
-            let mut new_trains = vec![];
+            let mut updated_trains: Vec<FormationResponse> = Vec::new();
+            let mut existing_by_number = {
+                let guard = TRAINS.read().unwrap();
+                guard
+                    .iter()
+                    .cloned()
+                    .map(|t| (t.train_meta_information.train_number, t))
+                    .collect::<std::collections::BTreeMap<_, _>>()
+            };
 
             println!("Loaded trains: {:?}", trains);
 
@@ -104,10 +111,11 @@ pub fn start_tabs_reload_task() {
                                     println!("Error loading formation for train {}: {}", train, e);
                                 }
                                 Ok(formation) => {
-                                    new_trains.push(formation);
+                                    existing_by_number.remove(&(train as u32));
+                                    updated_trains.push(formation);
 
                                     let mut guard = TRAINS.write().unwrap();
-                                    *guard = new_trains.clone();
+                                    *guard = updated_trains.clone();
                                     break 'load_train;
                                 }
                             }
@@ -115,6 +123,14 @@ pub fn start_tabs_reload_task() {
 
                         std::thread::sleep(Duration::from_secs(12));
                     }
+
+                    // Keep any previously loaded trains that were not returned this cycle.
+                    for (_, formation) in existing_by_number {
+                        updated_trains.push(formation);
+                    }
+
+                    let mut guard = TRAINS.write().unwrap();
+                    *guard = updated_trains;
                 }
                 Err(e) => {
                     println!("Error fetching train numbers: {}", e);

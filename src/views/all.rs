@@ -1,11 +1,6 @@
 use crate::get_trains;
 use dioxus::prelude::*;
-use opentransportdata::{
-    parse_formation_short_string, FormationResponse, Offer, StatusFlag, VehicleType,
-};
-
-const EW_IV_FIRST_CLASS_THRESHOLD: usize = 2;
-const EW_IV_COUNT_THRESHOLD: usize = 3;
+use opentransportdata::{get_vehicle_information, parse_formation_short_string, Formation, FormationResponse, FormationVehicle, Offer, StatusFlag, VehicleIdentifier, VehicleType};
 
 const ARROW_ICON: Asset = asset!("/assets/chevron-left-medium.svg");
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
@@ -62,7 +57,10 @@ fn TrainView(train: FormationResponse) -> Element {
             .map(|(i, _)| i)
             .unwrap_or(0)
     });
+    let mut active_vehicle = use_signal(|| None::<usize>);
 
+    let vehicle_information = get_vehicle_information(&train);
+    
     let tabs = train
         .formations_at_scheduled_stops
         .iter()
@@ -107,8 +105,10 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "tab-panel",
                 {
-                    let mut cars = parse_formation_short_string(&train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string,
-                    EW_IV_FIRST_CLASS_THRESHOLD, EW_IV_COUNT_THRESHOLD);
+                    let mut cars = parse_formation_short_string(
+                        &train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string,
+                        &vehicle_information,
+                    );
 
                     let stop = &train.formations_at_scheduled_stops[selected()];
 
@@ -132,7 +132,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
                     let train_length = cars.len();
 
-                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>)> =
+                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>, Option<FormationVehicle>)> =
                         cars.iter().enumerate().filter_map(|(i,car)| {
 
                             // collect overlay icons
@@ -258,12 +258,13 @@ fn TrainView(train: FormationResponse) -> Element {
 
                             prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
 
-                            Some((icon, overlay_icons, is_family_right, car.order_number, car.sector))
+                            let identifier = car.vehicle_identifier.clone();
+                            Some((icon, overlay_icons, is_family_right, car.order_number, car.sector, identifier))
                         })
                         .collect();
 
                     let mut sector_groups: Vec<(Option<char>, usize)> = Vec::new();
-                    for (_, _, _, _, sector) in rendered_cars.iter() {
+                    for (_, _, _, _, sector, _) in rendered_cars.iter() {
                         if let Some(last) = sector_groups.last_mut() {
                             if last.0 == *sector {
                                 last.1 += 1;
@@ -313,7 +314,7 @@ fn TrainView(train: FormationResponse) -> Element {
                                 }
                             }
                             div { class: "train-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
-                                for (icon, overlay_icons, is_family_right, order_number, _) in rendered_cars.iter() {
+                            for (index, (icon, overlay_icons, is_family_right, order_number, _, identifier)) in rendered_cars.iter().enumerate() {
                                     div { class: "vehicle",
 
                                         div { class: "car-number",
@@ -322,11 +323,29 @@ fn TrainView(train: FormationResponse) -> Element {
                                             }
                                         }
 
-                                         div { class: "vehicle-icon-wrapper",
+                                         div {
+                                            class: "vehicle-icon-wrapper",
+                                            onmouseenter: move |_| active_vehicle.set(Some(index)),
+                                            onmouseleave: move |_| active_vehicle.set(None),
+                                            onclick: move |_| {
+                                                if active_vehicle() == Some(index) {
+                                                    active_vehicle.set(None);
+                                                } else {
+                                                    active_vehicle.set(Some(index));
+                                                }
+                                            },
                                             img { src: *icon, class: "vehicle-icon" }
 
-                                            if !overlay_icons.is_empty() {
-                                                div {
+                                        if active_vehicle() == Some(index) {
+                                            if let Some(identifier) = identifier {
+                                                   if let Some(text) = format_vehicle_identifier(&identifier.vehicle_identifier) {
+                                                        div { class: "vehicle-tooltip", "{text}" }
+                                                    }
+                                            }
+                                        }
+
+                                        if !overlay_icons.is_empty() {
+                                            div {
                                                     class: if *is_family_right {
                                                         "overlay-icons family-right"
                                                     } else {
@@ -351,6 +370,33 @@ fn TrainView(train: FormationResponse) -> Element {
             }
         }
 
+    }
+}
+
+fn format_vehicle_identifier(identifier: &Option<VehicleIdentifier>) -> Option<String> {
+    let id = identifier.as_ref()?;
+    let mut parts: Vec<String> = Vec::new();
+
+    if let Some(name) = id.type_code_name.as_ref() {
+        if !name.is_empty() {
+            parts.push(name.clone());
+        }
+    }
+    if let Some(evn) = id.evn.as_ref() {
+        if !evn.is_empty() {
+            parts.push(format!("EVN {evn}"));
+        }
+    }
+    if let Some(parent) = id.parent_evn.as_ref() {
+        if !parent.is_empty() {
+            parts.push(format!("Parent {parent}"));
+        }
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" · "))
     }
 }
 

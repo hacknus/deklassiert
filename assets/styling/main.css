@@ -94,6 +94,7 @@ body {
     border-radius: 8px;
     background: #fff;
     color: #111;
+    overflow: visible;
 }
 
 .time-row {
@@ -146,10 +147,13 @@ body {
     --vehicle-gap: 4px;
     --arrow-width: 20px;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     white-space: nowrap;
     padding-bottom: 6px;
+    padding-inline: 24px;
+    scroll-padding-inline: 24px;
     -webkit-overflow-scrolling: touch;
+    position: relative;
 }
 
 .formation-row::-webkit-scrollbar {
@@ -236,9 +240,34 @@ body {
     display: block;
 }
 
+.vehicle-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    max-width: calc(var(--vehicle-width) - 8px);
+    white-space: normal;
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.sector-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
 .sector-row {
     display: grid;
-    margin-top: 8px;
+    margin-top: 0;
 }
 
 .sector-block {
@@ -253,20 +282,20 @@ body {
     background: #fafafa;
 }
 
-.sector-block--first {
-    position: relative;
-    padding-left: var(--arrow-width);
-}
-
-.sector-arrow {
-    position: absolute;
-    left: 4px;
-    top: 50%;
-    transform: translateY(-50%);
+.sector-arrow-fixed {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: var(--arrow-width);
+    height: 20px;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    flex: 0 0 auto;
 }
 
 @media (max-width: 680px) {
