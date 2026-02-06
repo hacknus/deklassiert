@@ -263,7 +263,7 @@ fn deklassiert_by_number(
     train: &FormationResponse,
 ) -> HashMap<u32, (bool, Option<VehicleIdentifier>)> {
     let mut map = HashMap::new();
-    for formation in train.formations.iter() {
+    if let Some(formation) = train.formations.first() {
         for vehicle in formation.formation_vehicles.iter() {
             let is_deklassiert = matches!(
                 vehicle
@@ -273,9 +273,8 @@ fn deklassiert_by_number(
                 Some(TrolleyStatus::Deklassiert)
                     | Some(TrolleyStatus::RestaurantUnbedientDeklassiert)
             );
-            if vehicle.number > 0 {
-                map.insert(vehicle.number, (is_deklassiert, vehicle.vehicle_identifier.clone()));
-            }
+            map.insert(vehicle.number, (is_deklassiert, vehicle.vehicle_identifier.clone()));
+
         }
     }
     map

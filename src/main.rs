@@ -70,13 +70,15 @@ pub fn start_tabs_reload_task() {
         let ojp_token = std::env::var("OJP_TOKEN").expect("set OJP_TOKEN env var");
 
         loop {
-            let trains = opentransportdata::fetch_train_numbers(&ojp_token);
+            let mut trains = opentransportdata::fetch_train_numbers(&ojp_token);
+
+            trains = Ok(vec![808]);
 
             let now_utc = chrono::Utc::now();
             let today = now_utc.date_naive();
             let year = today.year();
             let month = today.month();
-            let day = today.day();
+            let day = today.day() + 1;
 
             let mut updated_trains: Vec<FormationResponse> = Vec::new();
             let mut existing_by_number = {
@@ -92,7 +94,7 @@ pub fn start_tabs_reload_task() {
 
             match trains {
                 Ok(trains) => {
-                    for train in trains {
+                    'train_loop: for train in trains {
                         'load_train: loop {
                             println!("Loading formation for train {}", train);
                             match opentransportdata::get_train_formation(
@@ -107,6 +109,14 @@ pub fn start_tabs_reload_task() {
                                         println!("Rate limit hit, sleeping for 60 seconds");
                                         std::thread::sleep(Duration::from_secs(60));
                                         continue 'load_train;
+                                    } else if e.contains("Forbidden") {
+                                        println!("Forbidden for train {}, skipping", train);
+                                        std::thread::sleep(Duration::from_secs(12));
+                                        continue 'train_loop ;
+                                    } else if e.contains("Bad Request") {
+                                        println!("Bad request for train {}, skipping", train);
+                                        std::thread::sleep(Duration::from_secs(12));
+                                        continue 'train_loop;
                                     }
                                     println!("Error loading formation for train {}: {}", train, e);
                                 }

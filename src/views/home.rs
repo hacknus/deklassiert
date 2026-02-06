@@ -1,6 +1,8 @@
 use crate::get_trains;
 use dioxus::prelude::*;
-use opentransportdata::{parse_formation_for_stop, FormationResponse, Offer, StatusFlag, VehicleIdentifier, VehicleType};
+use opentransportdata::{
+    parse_formation_for_stop, FormationResponse, Offer, StatusFlag, VehicleIdentifier, VehicleType,
+};
 
 const ARROW_ICON: Asset = asset!("/assets/chevron-left-medium.svg");
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
@@ -300,58 +302,60 @@ fn TrainView(train: FormationResponse) -> Element {
                             div { class: "sector-arrow-fixed",
                                 img { src: ARROW_ICON, class: "clock-icon" }
                             }
-                            div { class: "sector-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
-                                for (sector, count) in sector_groups.iter() {
-                                    div {
-                                        class: "sector-block",
-                                        style: "grid-column: span {count};",
-                                        if let Some(letter) = sector {
-                                            span { "{letter}" }
+                            div { class: "formation-scroll",
+                                div { class: "sector-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
+                                    for (i, (sector, count)) in sector_groups.iter().enumerate() {
+                                        div {
+                                            class: if i == 0 { "sector-block sector-block--first" } else { "sector-block" },
+                                            style: "grid-column: span {count};",
+                                            if let Some(letter) = sector {
+                                                span { "{letter}" }
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            div { class: "train-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
-                            for (index, (icon, overlay_icons, is_family_right, order_number, _, identifier)) in rendered_cars.iter().enumerate() {
-                                    div { class: "vehicle",
+                                div { class: "train-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
+                                    for (index, (icon, overlay_icons, is_family_right, order_number, _, identifier)) in rendered_cars.iter().enumerate() {
+                                        div { class: "vehicle",
 
-                                        div { class: "car-number",
-                                            if let Some(num) = order_number {
-                                                "Wagen {num}"
-                                            }
-                                        }
-
-                                         div {
-                                            class: "vehicle-icon-wrapper",
-                                            onmouseenter: move |_| active_vehicle.set(Some(index)),
-                                            onmouseleave: move |_| active_vehicle.set(None),
-                                            onclick: move |_| {
-                                                if active_vehicle() == Some(index) {
-                                                    active_vehicle.set(None);
-                                                } else {
-                                                    active_vehicle.set(Some(index));
+                                            div { class: "car-number",
+                                                if let Some(num) = order_number {
+                                                    "Wagen {num}"
                                                 }
-                                            },
-                                            img { src: *icon, class: "vehicle-icon" }
-
-                                        if active_vehicle() == Some(index) {
-                                            if let Some(text) = format_vehicle_identifier(identifier) {
-                                                div { class: "vehicle-tooltip", "{text}" }
                                             }
-                                        }
 
-                                        if !overlay_icons.is_empty() {
-                                            div {
-                                                    class: if *is_family_right {
-                                                        "overlay-icons family-right"
+                                             div {
+                                                class: "vehicle-icon-wrapper",
+                                                onmouseenter: move |_| active_vehicle.set(Some(index)),
+                                                onmouseleave: move |_| active_vehicle.set(None),
+                                                onclick: move |_| {
+                                                    if active_vehicle() == Some(index) {
+                                                        active_vehicle.set(None);
                                                     } else {
-                                                        "overlay-icons"
-                                                    },
+                                                        active_vehicle.set(Some(index));
+                                                    }
+                                                },
+                                                img { src: *icon, class: "vehicle-icon" }
 
-                                                    for icon in overlay_icons.iter() {
-                                                        img {
-                                                            src: *icon,
-                                                            class: "overlay-icon"
+                                            if active_vehicle() == Some(index) {
+                                                if let Some(text) = format_vehicle_identifier(identifier) {
+                                                    div { class: "vehicle-tooltip", "{text}" }
+                                                }
+                                            }
+
+                                            if !overlay_icons.is_empty() {
+                                                div {
+                                                        class: if *is_family_right {
+                                                            "overlay-icons family-right"
+                                                        } else {
+                                                            "overlay-icons"
+                                                        },
+
+                                                        for icon in overlay_icons.iter() {
+                                                            img {
+                                                                src: *icon,
+                                                                class: "overlay-icon"
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -435,7 +439,7 @@ pub fn Home() -> Element {
         ),
         (
             FAMILY_CAR_L_ICON,
-            "Familienwagen",
+            "Steuerwagen",
             "legend-icon legend-icon--car",
             true,
         ),

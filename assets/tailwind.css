@@ -190,9 +190,6 @@
   .z-0 {
     z-index: 0;
   }
-  .z-2 {
-    z-index: 2;
-  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -225,9 +222,6 @@
   }
   .contents {
     display: contents;
-  }
-  .flex {
-    display: flex;
   }
   .hidden {
     display: none;
@@ -267,9 +261,6 @@
   }
   .resize {
     resize: both;
-  }
-  .flex-wrap {
-    flex-wrap: wrap;
   }
   .truncate {
     overflow: hidden;
