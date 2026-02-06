@@ -294,7 +294,8 @@ fn identifiers_by_position(train: &FormationResponse) -> Vec<Option<VehicleIdent
         if pos == 0 {
             continue;
         }
-        if let Some(slot) = identifiers.get_mut((pos - 1) as usize) {
+        let index = pos.saturating_sub(1) as usize;
+        if let Some(slot) = identifiers.get_mut(index) {
             *slot = identifier;
         }
     }
@@ -338,7 +339,8 @@ fn sectors_by_position_for_stop(
         if pos == 0 {
             continue;
         }
-        if let Some(slot) = sectors.get_mut((pos - 1) as usize) {
+        let index = pos.saturating_sub(1) as usize;
+        if let Some(slot) = sectors.get_mut(index) {
             *slot = sector;
         }
     }
@@ -352,8 +354,21 @@ fn zero_number_identifiers_by_position(
     for formation in train.formations.iter() {
         for vehicle in formation.formation_vehicles.iter() {
             if vehicle.number == 0 {
-                map.entry(vehicle.position)
-                    .or_insert(vehicle.vehicle_identifier.clone());
+                let identifier = vehicle.vehicle_identifier.clone();
+                let type_code_name_lower = identifier
+                    .as_ref()
+                    .and_then(|v| v.type_code_name.as_deref())
+                    .unwrap_or("")
+                    .to_lowercase();
+                let is_locomotive_identifier = identifier
+                    .as_ref()
+                    .and_then(|v| v.type_code)
+                    .map(|code| code == 1057)
+                    .unwrap_or(false)
+                    || type_code_name_lower.starts_with("re");
+                if is_locomotive_identifier {
+                    map.entry(vehicle.position).or_insert(identifier);
+                }
             }
         }
     }
@@ -461,6 +476,7 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
         identifiers_pos.clone()
     };
 
+    let mut loco_index = 0usize;
     for (index, vehicle) in vehicles.iter_mut().enumerate() {
         if let Some(coach_number) = vehicle.order_number {
             if let Some((deklassiert, identifier)) = deklassiert_map.get(&coach_number) {
@@ -476,12 +492,15 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
                 if let Some(identifier) = zero_number_identifiers[0].clone() {
                     vehicle.vehicle_identifier = Some(identifier);
                 }
-            } else if let Some(identifier) = identifiers_pos_oriented
-                .get(index)
-                .cloned()
-                .unwrap_or(None)
-            {
-                vehicle.vehicle_identifier = Some(identifier);
+            } else {
+                if let Some(identifier) = zero_number_identifiers
+                    .get(loco_index)
+                    .cloned()
+                    .unwrap_or(None)
+                {
+                    vehicle.vehicle_identifier = Some(identifier);
+                }
+                loco_index = loco_index.saturating_add(1);
             }
         }
 
