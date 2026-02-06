@@ -69,7 +69,7 @@ pub fn start_tabs_reload_task() {
         let formation_token = std::env::var("FORMATION_TOKEN").expect("TOKEN not set");
         let ojp_token = std::env::var("OJP_TOKEN").expect("set OJP_TOKEN env var");
 
-        'main_loop: loop {
+        loop {
             let trains = opentransportdata::fetch_train_numbers(&ojp_token);
 
             let now_utc = chrono::Utc::now();
@@ -78,39 +78,46 @@ pub fn start_tabs_reload_task() {
             let month = today.month();
             let day = today.day();
 
+            // TODO: remove old trains and update the ones that have changed instead of reloading all formations every time
             let mut new_trains = vec![];
 
             println!("Loaded trains: {:?}", trains);
 
-            if let Ok(trains) = trains {
-                for train in trains {
-                    println!("Loading formation for train {}", train);
+            match trains {
+                Ok(trains) => {
+                    for train in trains {
+                        'load_train: loop {
+                            println!("Loading formation for train {}", train);
+                            match opentransportdata::get_train_formation(
+                                train,
+                                year,
+                                month,
+                                day,
+                                &formation_token,
+                            ) {
+                                Err(e) => {
+                                    if e.contains("Too Many Requests") {
+                                        println!("Rate limit hit, sleeping for 60 seconds");
+                                        std::thread::sleep(Duration::from_secs(60));
+                                        continue 'load_train;
+                                    }
+                                    println!("Error loading formation for train {}: {}", train, e);
+                                }
+                                Ok(formation) => {
+                                    new_trains.push(formation);
 
-                    match opentransportdata::get_train_formation(
-                        train,
-                        year,
-                        month,
-                        day,
-                        &formation_token,
-                    ) {
-                        Err(e) => {
-                            if e.contains("Too Many Requests") {
-                                println!("Rate limit hit, sleeping for 60 seconds");
-                                std::thread::sleep(Duration::from_secs(60));
-                                continue 'main_loop;
+                                    let mut guard = TRAINS.write().unwrap();
+                                    *guard = new_trains.clone();
+                                    break 'load_train;
+                                }
                             }
-                            println!("Error loading formation for train {}: {}", train, e);
-                        }
-                        Ok(formation) => {
-                            new_trains.push(formation);
-
-                            let mut guard = TRAINS.write().unwrap();
-                            *guard = new_trains.clone();
                         }
 
+                        std::thread::sleep(Duration::from_secs(12));
                     }
-
-                    std::thread::sleep(Duration::from_secs(12));
+                }
+                Err(e) => {
+                    println!("Error fetching train numbers: {}", e);
                 }
             }
 
