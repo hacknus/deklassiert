@@ -1,6 +1,6 @@
 use crate::get_trains;
 use dioxus::prelude::*;
-use opentransportdata::{get_vehicle_information, parse_formation_short_string, Formation, FormationResponse, FormationVehicle, Offer, StatusFlag, VehicleIdentifier, VehicleType};
+use opentransportdata::{parse_formation_for_stop, FormationResponse, Offer, StatusFlag, VehicleIdentifier, VehicleType};
 
 const ARROW_ICON: Asset = asset!("/assets/chevron-left-medium.svg");
 const CLOCK_ICON: Asset = asset!("/assets/clock.svg");
@@ -59,7 +59,10 @@ fn TrainView(train: FormationResponse) -> Element {
     });
     let mut active_vehicle = use_signal(|| None::<usize>);
 
-    let vehicle_information = get_vehicle_information(&train);
+    use_effect(move || {
+        let _ = selected();
+        active_vehicle.set(None);
+    });
     
     let tabs = train
         .formations_at_scheduled_stops
@@ -105,10 +108,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "tab-panel",
                 {
-                    let mut cars = parse_formation_short_string(
-                        &train.formations_at_scheduled_stops[selected()].formation_short.formation_short_string,
-                        &vehicle_information,
-                    );
+                    let mut cars = parse_formation_for_stop(&train, selected());
 
                     let stop = &train.formations_at_scheduled_stops[selected()];
 
@@ -132,7 +132,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
                     let train_length = cars.len();
 
-                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>, Option<FormationVehicle>)> =
+                    let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>, Option<VehicleIdentifier>)> =
                         cars.iter().enumerate().filter_map(|(i,car)| {
 
                             // collect overlay icons
@@ -297,16 +297,14 @@ fn TrainView(train: FormationResponse) -> Element {
                             }
                         }
                         div { class: "formation-row",
+                            div { class: "sector-arrow-fixed",
+                                img { src: ARROW_ICON, class: "clock-icon" }
+                            }
                             div { class: "sector-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
-                                for (i, (sector, count)) in sector_groups.iter().enumerate() {
+                                for (sector, count) in sector_groups.iter() {
                                     div {
-                                        class: if i == 0 { "sector-block sector-block--first" } else { "sector-block" },
+                                        class: "sector-block",
                                         style: "grid-column: span {count};",
-                                        if i == 0 {
-                                            span { class: "sector-arrow",
-                                                img { src: ARROW_ICON, class: "clock-icon" }
-                                            }
-                                        }
                                         if let Some(letter) = sector {
                                             span { "{letter}" }
                                         }
@@ -337,10 +335,8 @@ fn TrainView(train: FormationResponse) -> Element {
                                             img { src: *icon, class: "vehicle-icon" }
 
                                         if active_vehicle() == Some(index) {
-                                            if let Some(identifier) = identifier {
-                                                   if let Some(text) = format_vehicle_identifier(&identifier.vehicle_identifier) {
-                                                        div { class: "vehicle-tooltip", "{text}" }
-                                                    }
+                                            if let Some(text) = format_vehicle_identifier(identifier) {
+                                                div { class: "vehicle-tooltip", "{text}" }
                                             }
                                         }
 

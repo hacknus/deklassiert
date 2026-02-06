@@ -1,4 +1,4 @@
-use opentransportdata::{get_vehicle_information, get_train_formation, parse_formation_short_string};
+use opentransportdata::{get_train_formation, parse_formation_for_stop};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -11,18 +11,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Train number: {}", formation.train_meta_information.train_number);
     // dbg!(&formation);
 
-    let vehicle_information = get_vehicle_information(&formation);
-    
-    for stop in formation.formations_at_scheduled_stops {
+    for (i, stop) in formation.formations_at_scheduled_stops.iter().enumerate() {
         println!(
             "Stop: {} (track {})",
             stop.scheduled_stop.stop_point.name, stop.scheduled_stop.track
         );
 
-        let parsed = parse_formation_short_string(
-            &stop.formation_short.formation_short_string,
-            &vehicle_information,
-        );
+        let parsed = parse_formation_for_stop(&formation, i);
 
         for vehicle in parsed {
             println!("{:#?}", vehicle);
