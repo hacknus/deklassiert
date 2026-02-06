@@ -117,6 +117,7 @@ pub fn start_tabs_reload_task() {
                                         continue 'train_loop;
                                     }
                                     println!("Error loading formation for train {}: {}", train, e);
+                                    break 'load_train;
                                 }
                                 Ok(formation) => {
                                     existing_by_number.remove(&(train as u32));
