@@ -50,11 +50,24 @@ fn TrainView(train: FormationResponse) -> Element {
         pinned_vehicle.set(None);
     });
 
-    let tabs = train
+    let tabs_all = train
         .formations_at_scheduled_stops
         .iter()
         .map(|s| s.scheduled_stop.stop_point.name.clone())
         .collect::<Vec<_>>();
+
+    let visible_stop_indices = visible_stop_indices(&train);
+    if visible_stop_indices.is_empty() {
+        return rsx! {
+            div { class: "tabs",
+                div { class: "logo-row",
+                    img { src: IC_SVG, class: "app-logo" }
+                    "Nr {train.train_meta_information.train_number}"
+                }
+                div { class: "tab-panel", "Keine passenden Halte gefunden." }
+            }
+        };
+    }
 
     let selected_index = selected();
     let deklassiert_target_id = format!(
@@ -83,7 +96,7 @@ fn TrainView(train: FormationResponse) -> Element {
 
     let active_vehicle = hover_vehicle().or(pinned_vehicle());
     let train_logo = if (800..850).contains(&train.train_meta_information.train_number) {
-        if tabs.contains(&"Interlaken Ost".to_string()) {
+        if tabs_all.contains(&"Interlaken Ost".to_string()) {
             IC81_SVG
         } else {
             IC8_SVG
@@ -91,7 +104,7 @@ fn TrainView(train: FormationResponse) -> Element {
     } else if (950..1000).contains(&train.train_meta_information.train_number)
         || (600..650).contains(&train.train_meta_information.train_number)
     {
-        if tabs.contains(&"Interlaken Ost".to_string()) {
+        if tabs_all.contains(&"Interlaken Ost".to_string()) {
             IC61_SVG
         } else {
             IC6_SVG
@@ -108,12 +121,12 @@ fn TrainView(train: FormationResponse) -> Element {
                 "Nr {train.train_meta_information.train_number}"
             }
             ul { class: "tab-list",
-                for (i, t) in tabs.iter().enumerate() {
+                for (i, stop_index) in visible_stop_indices.clone().into_iter().enumerate() {
                     li {
                         key: "{i}",
-                        class: if selected() == i { "tab active" } else { "tab" },
-                        onclick: move |_| selected.set(i),
-                        "{t}"
+                        class: if selected() == stop_index { "tab active" } else { "tab" },
+                        onclick: move |_| selected.set(stop_index),
+                        "{train.formations_at_scheduled_stops[stop_index].scheduled_stop.stop_point.name}"
                     }
                 }
             }
@@ -425,9 +438,25 @@ fn format_vehicle_identifier(identifier: &Option<VehicleIdentifier>) -> Option<S
     }
 }
 
+fn visible_stop_indices(train: &FormationResponse) -> Vec<usize> {
+    train
+        .formations_at_scheduled_stops
+        .iter()
+        .enumerate()
+        .filter(|(_, stop)| !stop.scheduled_stop.stop_type.contains('D'))
+        .map(|(i, _)| i)
+        .collect()
+}
+
 fn select_current_or_next_stop(train: &FormationResponse) -> usize {
+    let visible = visible_stop_indices(train);
+    if visible.is_empty() {
+        return 0;
+    }
+
     let now = chrono::Utc::now();
-    for (i, stop) in train.formations_at_scheduled_stops.iter().enumerate() {
+    for i in visible.iter().copied() {
+        let stop = &train.formations_at_scheduled_stops[i];
         let arrival = stop
             .scheduled_stop
             .stop_time
@@ -452,10 +481,7 @@ fn select_current_or_next_stop(train: &FormationResponse) -> usize {
             }
         }
     }
-    train
-        .formations_at_scheduled_stops
-        .len()
-        .saturating_sub(1)
+    *visible.last().unwrap_or(&0)
 }
 
 #[component]
