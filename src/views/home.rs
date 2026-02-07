@@ -40,25 +40,7 @@ const IC_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic.svg");
 
 #[component]
 fn TrainView(train: FormationResponse) -> Element {
-    let mut selected = use_signal(|| {
-        let now = chrono::Utc::now();
-        train
-            .formations_at_scheduled_stops
-            .iter()
-            .enumerate()
-            .filter_map(|(i, s)| {
-                let time = s
-                    .scheduled_stop
-                    .stop_time
-                    .departure_time
-                    .or(s.scheduled_stop.stop_time.arrival_time)?;
-                let diff = (time.with_timezone(&chrono::Utc) - now).num_seconds().abs();
-                Some((i, diff))
-            })
-            .min_by_key(|(_, diff)| *diff)
-            .map(|(i, _)| i)
-            .unwrap_or(0)
-    });
+    let mut selected = use_signal(|| select_current_or_next_stop(&train));
     let mut hover_vehicle = use_signal(|| None::<usize>);
     let mut pinned_vehicle = use_signal(|| None::<usize>);
 
@@ -73,6 +55,31 @@ fn TrainView(train: FormationResponse) -> Element {
         .iter()
         .map(|s| s.scheduled_stop.stop_point.name.clone())
         .collect::<Vec<_>>();
+
+    let selected_index = selected();
+    let deklassiert_target_id = format!(
+        "deklassiert-{}-{}",
+        train.train_meta_information.train_number, selected_index
+    );
+    let deklassiert_target_id_effect = deklassiert_target_id.clone();
+
+    use_effect(move || {
+        let _ = selected_index;
+        #[cfg(target_arch = "wasm32")]
+        {
+            use web_sys::{ScrollBehavior, ScrollIntoViewOptions, ScrollLogicalPosition};
+            let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+                return;
+            };
+            if let Some(target) = document.get_element_by_id(&deklassiert_target_id_effect) {
+                let mut opts = ScrollIntoViewOptions::new();
+                opts.behavior(ScrollBehavior::Smooth);
+                opts.inline(ScrollLogicalPosition::Center);
+                opts.block(ScrollLogicalPosition::Nearest);
+                target.scroll_into_view_with_scroll_into_view_options(&opts);
+            }
+        }
+    });
 
     let active_vehicle = hover_vehicle().or(pinned_vehicle());
     let train_logo = if (800..850).contains(&train.train_meta_information.train_number) {
@@ -113,9 +120,9 @@ fn TrainView(train: FormationResponse) -> Element {
 
             div { class: "tab-panel",
                 {
-                    let mut cars = parse_formation_for_stop(&train, selected());
+                    let mut cars = parse_formation_for_stop(&train, selected_index);
 
-                    let stop = &train.formations_at_scheduled_stops[selected()];
+                    let stop = &train.formations_at_scheduled_stops[selected_index];
 
                     let arrival = stop
                         .scheduled_stop
@@ -136,6 +143,9 @@ fn TrainView(train: FormationResponse) -> Element {
                     cars = cars.iter().filter(|c| c.vehicle_type != VehicleType::Fictional && c.vehicle_type != VehicleType::Parked).cloned().collect::<Vec<_>>();
 
                     let train_length = cars.len();
+                    let first_deklassiert_index = cars
+                        .iter()
+                        .position(|car| car.status.contains(&StatusFlag::Deklassiert));
 
                     let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>, Option<VehicleIdentifier>)> =
                         cars.iter().enumerate().filter_map(|(i,car)| {
@@ -319,51 +329,62 @@ fn TrainView(train: FormationResponse) -> Element {
                                 }
                                 div { class: "train-row", style: "grid-template-columns: repeat({vehicle_count}, var(--vehicle-width)); column-gap: var(--vehicle-gap);" ,
                                     for (index, (icon, overlay_icons, is_family_right, order_number, _, identifier)) in rendered_cars.iter().enumerate() {
-                                        div { class: "vehicle",
-
-                                            div { class: "car-number",
-                                                if let Some(num) = order_number {
-                                                    "Wagen {num}"
-                                                }
-                                            }
-
-                                             div {
-                                                class: "vehicle-icon-wrapper",
-                                                onmouseenter: move |_| hover_vehicle.set(Some(index)),
-                                                onmouseleave: move |_| hover_vehicle.set(None),
-                                                onclick: move |_| {
-                                                    if pinned_vehicle() == Some(index) {
-                                                        pinned_vehicle.set(None);
-                                                    } else {
-                                                        pinned_vehicle.set(Some(index));
-                                                    }
-                                                    hover_vehicle.set(None);
-                                                },
-                                                img { src: *icon, class: "vehicle-icon" }
-
-                                            if active_vehicle == Some(index) {
-                                                if let Some(text) = format_vehicle_identifier(identifier) {
-                                                    div { class: "vehicle-tooltip", "{text}" }
-                                                }
-                                            }
-
-                                            if !overlay_icons.is_empty() {
+                                        {
+                                            let vehicle_id = if first_deklassiert_index == Some(index) {
+                                                Some(deklassiert_target_id.clone())
+                                            } else {
+                                                None
+                                            };
+                                            rsx!(
                                                 div {
-                                                        class: if *is_family_right {
-                                                            "overlay-icons family-right"
-                                                        } else {
-                                                            "overlay-icons"
-                                                        },
+                                                    class: "vehicle",
+                                                    id: vehicle_id,
 
-                                                        for icon in overlay_icons.iter() {
-                                                            img {
-                                                                src: *icon,
-                                                                class: "overlay-icon"
+                                                    div { class: "car-number",
+                                                        if let Some(num) = order_number {
+                                                            "Wagen {num}"
+                                                        }
+                                                    }
+
+                                                     div {
+                                                        class: "vehicle-icon-wrapper",
+                                                        onmouseenter: move |_| hover_vehicle.set(Some(index)),
+                                                        onmouseleave: move |_| hover_vehicle.set(None),
+                                                        onclick: move |_| {
+                                                            if pinned_vehicle() == Some(index) {
+                                                                pinned_vehicle.set(None);
+                                                            } else {
+                                                                pinned_vehicle.set(Some(index));
+                                                            }
+                                                            hover_vehicle.set(None);
+                                                        },
+                                                        img { src: *icon, class: "vehicle-icon" }
+
+                                                    if active_vehicle == Some(index) {
+                                                        if let Some(text) = format_vehicle_identifier(identifier) {
+                                                            div { class: "vehicle-tooltip", "{text}" }
+                                                        }
+                                                    }
+
+                                                    if !overlay_icons.is_empty() {
+                                                        div {
+                                                                class: if *is_family_right {
+                                                                    "overlay-icons family-right"
+                                                                } else {
+                                                                    "overlay-icons"
+                                                                },
+
+                                                                for icon in overlay_icons.iter() {
+                                                                    img {
+                                                                        src: *icon,
+                                                                        class: "overlay-icon"
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
+                                            )
                                         }
                                     }
                                 }
@@ -402,6 +423,39 @@ fn format_vehicle_identifier(identifier: &Option<VehicleIdentifier>) -> Option<S
     } else {
         Some(parts.join(" · "))
     }
+}
+
+fn select_current_or_next_stop(train: &FormationResponse) -> usize {
+    let now = chrono::Utc::now();
+    for (i, stop) in train.formations_at_scheduled_stops.iter().enumerate() {
+        let arrival = stop
+            .scheduled_stop
+            .stop_time
+            .arrival_time
+            .map(|t| t.with_timezone(&chrono::Utc));
+        let departure = stop
+            .scheduled_stop
+            .stop_time
+            .departure_time
+            .map(|t| t.with_timezone(&chrono::Utc));
+
+        if let (Some(arrival), Some(departure)) = (arrival, departure) {
+            if now >= arrival && now <= departure {
+                return i;
+            }
+        }
+
+        let next_time = departure.or(arrival);
+        if let Some(next_time) = next_time {
+            if next_time >= now {
+                return i;
+            }
+        }
+    }
+    train
+        .formations_at_scheduled_stops
+        .len()
+        .saturating_sub(1)
 }
 
 #[component]

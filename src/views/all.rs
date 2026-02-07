@@ -40,25 +40,7 @@ const IC_SVG: Asset = asset!("/assets/sbb-icons-main/icons/ic.svg");
 
 #[component]
 fn TrainView(train: FormationResponse) -> Element {
-    let mut selected = use_signal(|| {
-        let now = chrono::Utc::now();
-        train
-            .formations_at_scheduled_stops
-            .iter()
-            .enumerate()
-            .filter_map(|(i, s)| {
-                let time = s
-                    .scheduled_stop
-                    .stop_time
-                    .departure_time
-                    .or(s.scheduled_stop.stop_time.arrival_time)?;
-                let diff = (time.with_timezone(&chrono::Utc) - now).num_seconds().abs();
-                Some((i, diff))
-            })
-            .min_by_key(|(_, diff)| *diff)
-            .map(|(i, _)| i)
-            .unwrap_or(0)
-    });
+    let mut selected = use_signal(|| select_current_or_next_stop(&train));
     let mut hover_vehicle = use_signal(|| None::<usize>);
     let mut pinned_vehicle = use_signal(|| None::<usize>);
 
@@ -402,6 +384,39 @@ fn format_vehicle_identifier(identifier: &Option<VehicleIdentifier>) -> Option<S
     } else {
         Some(parts.join(" · "))
     }
+}
+
+fn select_current_or_next_stop(train: &FormationResponse) -> usize {
+    let now = chrono::Utc::now();
+    for (i, stop) in train.formations_at_scheduled_stops.iter().enumerate() {
+        let arrival = stop
+            .scheduled_stop
+            .stop_time
+            .arrival_time
+            .map(|t| t.with_timezone(&chrono::Utc));
+        let departure = stop
+            .scheduled_stop
+            .stop_time
+            .departure_time
+            .map(|t| t.with_timezone(&chrono::Utc));
+
+        if let (Some(arrival), Some(departure)) = (arrival, departure) {
+            if now >= arrival && now <= departure {
+                return i;
+            }
+        }
+
+        let next_time = departure.or(arrival);
+        if let Some(next_time) = next_time {
+            if next_time >= now {
+                return i;
+            }
+        }
+    }
+    train
+        .formations_at_scheduled_stops
+        .len()
+        .saturating_sub(1)
 }
 
 #[component]
