@@ -59,11 +59,13 @@ fn TrainView(train: FormationResponse) -> Element {
             .map(|(i, _)| i)
             .unwrap_or(0)
     });
-    let mut active_vehicle = use_signal(|| None::<usize>);
+    let mut hover_vehicle = use_signal(|| None::<usize>);
+    let mut pinned_vehicle = use_signal(|| None::<usize>);
 
     use_effect(move || {
         let _ = selected();
-        active_vehicle.set(None);
+        hover_vehicle.set(None);
+        pinned_vehicle.set(None);
     });
 
     let tabs = train
@@ -72,6 +74,7 @@ fn TrainView(train: FormationResponse) -> Element {
         .map(|s| s.scheduled_stop.stop_point.name.clone())
         .collect::<Vec<_>>();
 
+    let active_vehicle = hover_vehicle().or(pinned_vehicle());
     let train_logo = if (800..850).contains(&train.train_meta_information.train_number) {
         if tabs.contains(&"Interlaken Ost".to_string()) {
             IC81_SVG
@@ -326,18 +329,19 @@ fn TrainView(train: FormationResponse) -> Element {
 
                                              div {
                                                 class: "vehicle-icon-wrapper",
-                                                onmouseenter: move |_| active_vehicle.set(Some(index)),
-                                                onmouseleave: move |_| active_vehicle.set(None),
+                                                onmouseenter: move |_| hover_vehicle.set(Some(index)),
+                                                onmouseleave: move |_| hover_vehicle.set(None),
                                                 onclick: move |_| {
-                                                    if active_vehicle() == Some(index) {
-                                                        active_vehicle.set(None);
+                                                    if pinned_vehicle() == Some(index) {
+                                                        pinned_vehicle.set(None);
                                                     } else {
-                                                        active_vehicle.set(Some(index));
+                                                        pinned_vehicle.set(Some(index));
                                                     }
+                                                    hover_vehicle.set(None);
                                                 },
                                                 img { src: *icon, class: "vehicle-icon" }
 
-                                            if active_vehicle() == Some(index) {
+                                            if active_vehicle == Some(index) {
                                                 if let Some(text) = format_vehicle_identifier(identifier) {
                                                     div { class: "vehicle-tooltip", "{text}" }
                                                 }

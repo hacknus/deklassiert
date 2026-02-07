@@ -6,7 +6,7 @@ use quick_xml::events::Event;
 // rust
 use quick_xml::Reader;
 use regex::Regex;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatusFlag {
@@ -273,8 +273,10 @@ fn deklassiert_by_number(
                 Some(TrolleyStatus::Deklassiert)
                     | Some(TrolleyStatus::RestaurantUnbedientDeklassiert)
             );
-            map.insert(vehicle.number, (is_deklassiert, vehicle.vehicle_identifier.clone()));
-
+            map.insert(
+                vehicle.number,
+                (is_deklassiert, vehicle.vehicle_identifier.clone()),
+            );
         }
     }
     map
@@ -314,10 +316,7 @@ fn positions_by_number(train: &FormationResponse) -> HashMap<u32, u32> {
     map
 }
 
-fn sectors_by_position_for_stop(
-    train: &FormationResponse,
-    stop_uic: u32,
-) -> Vec<Option<char>> {
+fn sectors_by_position_for_stop(train: &FormationResponse, stop_uic: u32) -> Vec<Option<char>> {
     let mut map: BTreeMap<u32, Option<char>> = BTreeMap::new();
     for formation in train.formations.iter() {
         for vehicle in formation.formation_vehicles.iter() {
@@ -407,7 +406,6 @@ fn parse_offer(s: &str) -> Offer {
     }
 }
 
-
 fn parse_formation_short_string_raw(input: &str) -> Vec<Vehicle> {
     let mut vehicles = Vec::new();
     let mut buf = String::new();
@@ -482,6 +480,19 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
             if let Some((deklassiert, identifier)) = deklassiert_map.get(&coach_number) {
                 if *deklassiert && !vehicle.status.contains(&StatusFlag::Deklassiert) {
                     vehicle.status.push(StatusFlag::Deklassiert);
+                }
+                if vehicle.vehicle_type == VehicleType::SecondClass
+                    || vehicle.vehicle_type == VehicleType::FirstAndSecondClass
+                    || vehicle.vehicle_type == VehicleType::DiningSecondClass
+                {
+                    if let Some(name) = identifier.clone().and_then(|a| a.type_code_name) {
+                        // if it is a first class coach (starts with A) but not marked as deklassiert, mark it as deklassiert
+                        if name.starts_with("A")
+                            && !vehicle.status.contains(&StatusFlag::Deklassiert)
+                        {
+                            vehicle.status.push(StatusFlag::Deklassiert);
+                        }
+                    }
                 }
                 if vehicle.vehicle_identifier.is_none() {
                     vehicle.vehicle_identifier = identifier.clone();
