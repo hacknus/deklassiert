@@ -101,7 +101,7 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 18px;
+    font-size: 14px;
 }
 
 .time-item {
@@ -111,8 +111,8 @@ body {
 }
 
 .clock-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     opacity: 0.7;
 }
 
@@ -271,7 +271,7 @@ body {
 
 .sector-row {
     display: grid;
-    margin-top: 0;
+    margin-top: 6;
 }
 
 .sector-block {
@@ -290,6 +290,7 @@ body {
     position: absolute;
     left: var(--formation-padding);
     top: 0;
+    margin-top: 6;
     z-index: 3;
     display: inline-flex;
     align-items: center;

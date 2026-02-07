@@ -69,6 +69,23 @@ pub fn start_tabs_reload_task() {
         let formation_token = std::env::var("FORMATION_TOKEN").expect("TOKEN not set");
         let ojp_token = std::env::var("OJP_TOKEN").expect("set OJP_TOKEN env var");
 
+        let is_train_finished = |train: &FormationResponse, now: chrono::DateTime<chrono::Utc>| {
+            let last_time = train
+                .formations_at_scheduled_stops
+                .iter()
+                .rev()
+                .find_map(|stop| {
+                    stop.scheduled_stop
+                        .stop_time
+                        .departure_time
+                        .or(stop.scheduled_stop.stop_time.arrival_time)
+                });
+            match last_time {
+                Some(time) => time.with_timezone(&chrono::Utc) < now,
+                None => false,
+            }
+        };
+
         loop {
             let trains = opentransportdata::fetch_train_numbers(&ojp_token);
 
@@ -78,8 +95,7 @@ pub fn start_tabs_reload_task() {
             let month = today.month();
             let day = today.day();
 
-            let mut updated_trains: Vec<FormationResponse> = Vec::new();
-            let mut existing_by_number = {
+            let mut train_map = {
                 let guard = TRAINS.read().unwrap();
                 guard
                     .iter()
@@ -120,11 +136,9 @@ pub fn start_tabs_reload_task() {
                                     break 'load_train;
                                 }
                                 Ok(formation) => {
-                                    existing_by_number.remove(&(train as u32));
-                                    updated_trains.push(formation);
-
+                                    train_map.insert(formation.train_meta_information.train_number, formation);
                                     let mut guard = TRAINS.write().unwrap();
-                                    *guard = updated_trains.clone();
+                                    *guard = train_map.values().cloned().collect();
                                     break 'load_train;
                                 }
                             }
@@ -133,13 +147,11 @@ pub fn start_tabs_reload_task() {
                         std::thread::sleep(Duration::from_secs(12));
                     }
 
-                    // Keep any previously loaded trains that were not returned this cycle.
-                    for (_, formation) in existing_by_number {
-                        updated_trains.push(formation);
-                    }
+                    // Remove trains that have already passed.
+                    train_map.retain(|_, formation| !is_train_finished(formation, now_utc));
 
                     let mut guard = TRAINS.write().unwrap();
-                    *guard = updated_trains;
+                    *guard = train_map.values().cloned().collect();
                 }
                 Err(e) => {
                     println!("Error fetching train numbers: {}", e);
