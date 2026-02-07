@@ -485,12 +485,17 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
                     || vehicle.vehicle_type == VehicleType::FirstAndSecondClass
                     || vehicle.vehicle_type == VehicleType::DiningSecondClass
                 {
-                    if let Some(name) = identifier.clone().and_then(|a| a.type_code_name) {
-                        // if it is a first class coach (starts with A) but not marked as deklassiert, mark it as deklassiert
-                        if name.starts_with("A")
-                            && !vehicle.status.contains(&StatusFlag::Deklassiert)
+                    if let Some(identifier) = identifier.clone() {
+                        if let (Some(name), Some(evn)) =
+                            (identifier.type_code_name, identifier.evn)
                         {
-                            vehicle.status.push(StatusFlag::Deklassiert);
+                            // if it is a first class coach (starts with A) but not marked as deklassiert, mark it as deklassiert
+                            if name.starts_with("A")
+                                && !evn.starts_with("93") // astoro coaches have evn starting with 93 but are not deklassiert
+                                && !vehicle.status.contains(&StatusFlag::Deklassiert)
+                            {
+                                vehicle.status.push(StatusFlag::Deklassiert);
+                            }
                         }
                     }
                 }

@@ -146,7 +146,7 @@ body {
     --vehicle-width: 150px;
     --vehicle-gap: 4px;
     --arrow-width: 20px;
-    --formation-padding: 24px;
+ /*   --formation-padding: 24px; */
     position: relative;
 }
 
