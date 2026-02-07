@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Datelike, FixedOffset, TimeZone};
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 
@@ -466,13 +466,6 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
         (Some(first), Some(last)) => last < first,
         _ => false,
     };
-    let identifiers_pos_oriented = if reversed {
-        let mut rev = identifiers_pos.clone();
-        rev.reverse();
-        rev
-    } else {
-        identifiers_pos.clone()
-    };
 
     let mut loco_index = 0usize;
     for (index, vehicle) in vehicles.iter_mut().enumerate() {
@@ -666,7 +659,9 @@ fn handle_text(
     elem_stack: &Vec<String>,
     current_train_number: &mut Option<String>,
     current_departure_time: &mut Option<DateTime<chrono::Utc>>,
+    current_latest_arrival: &mut Option<DateTime<chrono::Utc>>,
     in_service_departure: bool,
+    in_service_arrival: bool,
 ) {
     if text.is_empty() {
         return;
@@ -684,6 +679,16 @@ fn handle_text(
                 *current_departure_time = Some(dt.with_timezone(&chrono::Utc));
             }
         }
+
+        if in_service_arrival && lower.ends_with("timetabledtime") {
+            if let Ok(dt) = DateTime::parse_from_rfc3339(text) {
+                let dt = dt.with_timezone(&chrono::Utc);
+                let replace = current_latest_arrival.map_or(true, |cur| dt > cur);
+                if replace {
+                    *current_latest_arrival = Some(dt);
+                }
+            }
+        }
     }
 }
 
@@ -698,18 +703,29 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
     let mut numbers: BTreeSet<String> = BTreeSet::new();
 
     let now_utc = chrono::Utc::now();
-    let today = now_utc.date_naive();
-    let tomorrow = today.succ_opt().unwrap();
-    let end_of_today = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
-        tomorrow.and_hms_opt(4, 0, 0).unwrap(),
-        chrono::Utc,
-    );
+    let tz = chrono_tz::Europe::Zurich;
+    let today_local = now_utc.with_timezone(&tz).date_naive();
+    let tomorrow_local = today_local.succ_opt().unwrap();
+    let end_of_today = tz
+        .with_ymd_and_hms(
+            tomorrow_local.year(),
+            tomorrow_local.month(),
+            tomorrow_local.day(),
+            4,
+            0,
+            0,
+        )
+        .single()
+        .unwrap()
+        .with_timezone(&chrono::Utc);
 
     // per StopEvent state
     let mut current_train_number: Option<String> = None;
     let mut current_departure_time: Option<DateTime<chrono::Utc>> = None;
+    let mut current_latest_arrival: Option<DateTime<chrono::Utc>> = None;
     let mut in_this_call = false;
     let mut in_service_departure = false;
+    let mut in_service_arrival = false;
 
     loop {
         match reader.read_event_into(&mut buf) {
@@ -722,9 +738,11 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
                     "StopEvent" => {
                         current_train_number = None;
                         current_departure_time = None;
+                        current_latest_arrival = None;
                     }
                     "ThisCall" => in_this_call = true,
                     "ServiceDeparture" if in_this_call => in_service_departure = true,
+                    "ServiceArrival" => in_service_arrival = true,
                     _ => {}
                 }
 
@@ -740,12 +758,18 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
                             (&current_train_number, &current_departure_time)
                         {
                             if *dep_time <= end_of_today {
-                                numbers.insert(train.clone());
+                                let has_future_arrival = current_latest_arrival
+                                    .map(|latest| latest > now_utc)
+                                    .unwrap_or(true);
+                                if has_future_arrival {
+                                    numbers.insert(train.clone());
+                                }
                             }
                         }
                     }
                     "ThisCall" => in_this_call = false,
                     "ServiceDeparture" => in_service_departure = false,
+                    "ServiceArrival" => in_service_arrival = false,
                     _ => {}
                 }
 
@@ -759,7 +783,9 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
                     &elem_stack,
                     &mut current_train_number,
                     &mut current_departure_time,
+                    &mut current_latest_arrival,
                     in_service_departure,
+                    in_service_arrival,
                 );
             }
 
@@ -770,7 +796,9 @@ pub fn parse_train_numbers(xml: &str) -> Vec<String> {
                     &elem_stack,
                     &mut current_train_number,
                     &mut current_departure_time,
+                    &mut current_latest_arrival,
                     in_service_departure,
+                    in_service_arrival,
                 );
             }
 
@@ -795,7 +823,23 @@ pub fn fetch_train_numbers(token: &str) -> Result<Vec<i32>, Box<dyn std::error::
     let url = "https://api.opentransportdata.swiss/ojp20";
 
     let now = chrono::Utc::now();
-    let start_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let tz = chrono_tz::Europe::Zurich;
+    let today_local = now.with_timezone(&tz).date_naive();
+    let start_local = tz
+        .with_ymd_and_hms(
+            today_local.year(),
+            today_local.month(),
+            today_local.day(),
+            4,
+            0,
+            0,
+        )
+        .single()
+        .ok_or("invalid local start time")?;
+    let start_time = start_local
+        .with_timezone(&chrono::Utc)
+        .format("%Y-%m-%dT%H:%M:%SZ")
+        .to_string();
 
     // Simple XML similar to the Python example; adjust StopPointRef / params as needed.
     let xml_body = format!(
