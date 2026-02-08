@@ -64,7 +64,8 @@ pub struct Vehicle {
 pub struct FormationResponse {
     #[serde(default, deserialize_with = "null_to_empty")]
     pub vehicle_journey_type: String,
-    pub last_update: DateTime<FixedOffset>,
+    #[serde(default, deserialize_with = "null_to_empty")]
+    pub last_update: String,
     pub journey_meta_information: JourneyMetaInformation,
     pub train_meta_information: TrainMetaInformation,
     pub formations_at_scheduled_stops: Vec<FormationAtScheduledStop>,
@@ -167,6 +168,40 @@ pub struct FormationVehicle {
 pub struct VehicleProperties {
     #[serde(default)]
     pub trolley_status: Option<TrolleyStatus>,
+    #[serde(default)]
+    pub number1class: u32,
+    #[serde(default)]
+    pub number2class: u32,
+    #[serde(default)]
+    pub number_bike_hooks: u32,
+    #[serde(default)]
+    pub bike_platform: bool,
+    #[serde(default)]
+    pub low_floor_trolley: bool,
+    #[serde(default)]
+    pub accessibility_properties: Option<AccessibilityProperties>,
+    #[serde(default)]
+    pub picto_properties: Option<PictoProperties>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AccessibilityProperties {
+    #[serde(default)]
+    pub number_wheelchair_spaces: u32,
+    #[serde(default)]
+    pub wheelchair_toilet: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PictoProperties {
+    #[serde(default)]
+    pub bike_picto: bool,
+    #[serde(default)]
+    pub family_zone_picto: bool,
+    #[serde(default)]
+    pub business_zone_picto: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -406,119 +441,250 @@ fn parse_offer(s: &str) -> Offer {
     }
 }
 
-fn parse_formation_short_string_raw(input: &str) -> Vec<Vehicle> {
-    let mut vehicles = Vec::new();
-    let mut buf = String::new();
-    let mut current_sector: Option<char> = None;
+fn vehicle_type_from_detailed(vehicle: &FormationVehicle) -> VehicleType {
+    let type_name = vehicle
+        .vehicle_identifier
+        .as_ref()
+        .and_then(|v| v.type_code_name.as_deref())
+        .unwrap_or("");
 
-    let mut chars = input.chars().peekable();
+    let (n1, n2) = vehicle
+        .vehicle_properties
+        .as_ref()
+        .map(|p| (p.number1class, p.number2class))
+        .unwrap_or((0, 0));
 
-    while let Some(ch) = chars.next() {
-        match ch {
-            '@' => {
-                if let Some(sec) = chars.next() {
-                    current_sector = Some(sec);
+    if vehicle.number == 0 && n1 == 0 && n2 == 0 {
+        return VehicleType::Locomotive;
+    }
+
+    if type_name.starts_with("WR") {
+        return VehicleType::DiningSecondClass;
+    }
+
+    if type_name.contains("Fam") {
+        return VehicleType::FamilyCar;
+    }
+
+    if n1 > 0 && n2 > 0 {
+        return VehicleType::FirstAndSecondClass;
+    }
+
+    if n1 > 0 {
+        return VehicleType::FirstClass;
+    }
+
+    if n2 > 0 {
+        return VehicleType::SecondClass;
+    }
+
+    if type_name.is_empty() {
+        VehicleType::Unknown("Unknown".to_string())
+    } else {
+        VehicleType::Unknown(type_name.to_string())
+    }
+}
+
+fn offers_from_detailed(vehicle: &FormationVehicle) -> Vec<Offer> {
+    let mut offers = Vec::new();
+    let Some(props) = vehicle.vehicle_properties.as_ref() else {
+        return offers;
+    };
+
+    if props.low_floor_trolley {
+        offers.push(Offer::LowFloor);
+    }
+
+    let has_bike = props.number_bike_hooks > 0
+        || props.bike_platform
+        || props
+            .picto_properties
+            .as_ref()
+            .map(|p| p.bike_picto)
+            .unwrap_or(false);
+    if has_bike {
+        offers.push(Offer::BikeHooks);
+    }
+
+    let has_wheelchair = props
+        .accessibility_properties
+        .as_ref()
+        .map(|a| a.number_wheelchair_spaces > 0 || a.wheelchair_toilet)
+        .unwrap_or(false);
+    if has_wheelchair {
+        offers.push(Offer::Wheelchair);
+    }
+
+    if props
+        .picto_properties
+        .as_ref()
+        .map(|p| p.business_zone_picto)
+        .unwrap_or(false)
+    {
+        offers.push(Offer::BusinessZone);
+    }
+
+    if props
+        .picto_properties
+        .as_ref()
+        .map(|p| p.family_zone_picto)
+        .unwrap_or(false)
+    {
+        offers.push(Offer::FamilyZone);
+    }
+
+    offers
+}
+
+fn short_string_car1_left(formation_short: &str) -> Option<bool> {
+    if formation_short.is_empty() {
+        return None;
+    }
+
+    let num_re = Regex::new(r":(\d+)").ok()?;
+    let mut seq: Vec<u32> = Vec::new();
+
+    for part in formation_short.split(',') {
+        let tok = part.trim();
+        if tok.is_empty() {
+            continue;
+        }
+
+        let mut last_num: Option<u32> = None;
+        for cap in num_re.captures_iter(tok) {
+            if let Some(num_str) = cap.get(1) {
+                if let Ok(num) = num_str.as_str().parse::<u32>() {
+                    last_num = Some(num);
                 }
             }
-            '[' | ']' | ',' => {
-                if let Some(vehicle) = parse_vehicle(buf.trim(), current_sector) {
-                    vehicles.push(vehicle);
-                }
-                buf.clear();
-            }
-            _ => buf.push(ch),
+        }
+        if let Some(num) = last_num {
+            seq.push(num);
         }
     }
 
-    if let Some(vehicle) = parse_vehicle(buf.trim(), current_sector) {
-        vehicles.push(vehicle);
-    }
-
-    vehicles
+    let idx = seq.iter().position(|n| *n == 1)?;
+    let last_idx = seq.len().saturating_sub(1);
+    Some(idx <= last_idx.saturating_sub(idx))
 }
 
 pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) -> Vec<Vehicle> {
     let stop = &train.formations_at_scheduled_stops[stop_index];
     let stop_uic = stop.scheduled_stop.stop_point.uic;
+    let short_left = short_string_car1_left(&stop.formation_short.formation_short_string);
 
-    let mut vehicles =
-        parse_formation_short_string_raw(&stop.formation_short.formation_short_string);
-
-    let deklassiert_map = deklassiert_by_number(train);
-    let identifiers_pos = identifiers_by_position(train);
-    let number_positions = positions_by_number(train);
-    let sectors_pos = sectors_by_position_for_stop(train, stop_uic);
-    let zero_number_identifiers = zero_number_identifiers_by_position(train);
-
-    let mut first_pos: Option<u32> = None;
-    let mut last_pos: Option<u32> = None;
-    for vehicle in vehicles.iter() {
-        if let Some(num) = vehicle.order_number {
-            if let Some(pos) = number_positions.get(&num).copied() {
-                if first_pos.is_none() {
-                    first_pos = Some(pos);
-                }
-                last_pos = Some(pos);
-            }
-        }
-    }
-    let reversed = match (first_pos, last_pos) {
-        (Some(first), Some(last)) => last < first,
-        _ => false,
+    let Some(formation) = train.formations.first() else {
+        return Vec::new();
     };
 
-    let mut loco_index = 0usize;
-    for (index, vehicle) in vehicles.iter_mut().enumerate() {
-        if let Some(coach_number) = vehicle.order_number {
-            if let Some((deklassiert, identifier)) = deklassiert_map.get(&coach_number) {
-                if *deklassiert && !vehicle.status.contains(&StatusFlag::Deklassiert) {
-                    vehicle.status.push(StatusFlag::Deklassiert);
+    let mut formation_vehicles = formation.formation_vehicles.clone();
+    formation_vehicles.sort_by_key(|v| v.position);
+
+    let stop_index_by_uic: HashMap<u32, usize> = train
+        .formations_at_scheduled_stops
+        .iter()
+        .enumerate()
+        .map(|(idx, s)| (s.scheduled_stop.stop_point.uic, idx))
+        .collect();
+    let current_stop_index = stop_index_by_uic.get(&stop_uic).copied().unwrap_or(0);
+
+    let mut out = Vec::new();
+    for formation_vehicle in formation_vehicles {
+        let earliest_idx = formation_vehicle
+            .formation_vehicle_at_scheduled_stops
+            .iter()
+            .filter_map(|s| stop_index_by_uic.get(&s.stop_point.uic).copied())
+            .min();
+        if earliest_idx.map_or(false, |idx| current_stop_index < idx) {
+            continue;
+        }
+
+        let mut stop_info = formation_vehicle
+            .formation_vehicle_at_scheduled_stops
+            .iter()
+            .find(|s| s.stop_point.uic == stop_uic);
+
+        if stop_info.is_none() {
+            stop_info = formation_vehicle
+                .formation_vehicle_at_scheduled_stops
+                .iter()
+                .filter_map(|s| {
+                    let idx = stop_index_by_uic.get(&s.stop_point.uic).copied()?;
+                    (idx <= current_stop_index).then_some((idx, s))
+                })
+                .max_by_key(|(idx, _)| *idx)
+                .map(|(_, s)| s);
+        }
+
+        let sector = stop_info
+            .and_then(|info| info.sectors.as_ref())
+            .and_then(|s| s.split(',').next())
+            .and_then(|s| s.trim().chars().next());
+
+        let mut status = Vec::new();
+        if let Some(props) = formation_vehicle.vehicle_properties.as_ref() {
+            if matches!(
+                props.trolley_status,
+                Some(TrolleyStatus::Deklassiert)
+                    | Some(TrolleyStatus::RestaurantUnbedientDeklassiert)
+            ) {
+                status.push(StatusFlag::Deklassiert);
+            }
+        }
+
+        let vehicle = Vehicle {
+            sector,
+            status,
+            no_passage_left: false,
+            no_passage_right: false,
+            vehicle_type: vehicle_type_from_detailed(&formation_vehicle),
+            order_number: if formation_vehicle.number > 0 {
+                Some(formation_vehicle.number)
+            } else {
+                None
+            },
+            offers: offers_from_detailed(&formation_vehicle),
+            vehicle_identifier: formation_vehicle.vehicle_identifier.clone(),
+        };
+
+        out.push(vehicle);
+    }
+
+    if let Some(desired_left) = short_left {
+        if let Some(idx) = out.iter().position(|v| v.order_number == Some(1)) {
+            let last_idx = out.len().saturating_sub(1);
+            let current_left = idx <= last_idx.saturating_sub(idx);
+            if current_left != desired_left {
+                let mut sector_set: BTreeSet<char> = BTreeSet::new();
+                for vehicle in out.iter() {
+                    if let Some(sec) = vehicle.sector {
+                        sector_set.insert(sec);
+                    }
                 }
-                if vehicle.vehicle_type == VehicleType::SecondClass
-                    || vehicle.vehicle_type == VehicleType::FirstAndSecondClass
-                    || vehicle.vehicle_type == VehicleType::DiningSecondClass
-                {
-                    if let Some(identifier) = identifier.clone() {
-                        if let (Some(name), Some(evn)) =
-                            (identifier.type_code_name, identifier.evn)
-                        {
-                            // if it is a first class coach (starts with A) but not marked as deklassiert, mark it as deklassiert
-                            if name.starts_with("A")
-                                && !evn.starts_with("93") // astoro coaches have evn starting with 93 but are not deklassiert
-                                && !vehicle.status.contains(&StatusFlag::Deklassiert)
-                            {
-                                vehicle.status.push(StatusFlag::Deklassiert);
+                let sectors: Vec<char> = sector_set.into_iter().collect();
+                let mut sector_map: HashMap<char, char> = HashMap::new();
+                let len = sectors.len();
+                if len > 1 {
+                    for (i, sec) in sectors.iter().enumerate() {
+                        let mirror = sectors[len - 1 - i];
+                        sector_map.insert(*sec, mirror);
+                    }
+                }
+                out.reverse();
+                if !sector_map.is_empty() {
+                    for vehicle in out.iter_mut() {
+                        if let Some(sec) = vehicle.sector {
+                            if let Some(mapped) = sector_map.get(&sec).copied() {
+                                vehicle.sector = Some(mapped);
                             }
                         }
                     }
                 }
-                if vehicle.vehicle_identifier.is_none() {
-                    vehicle.vehicle_identifier = identifier.clone();
-                }
             }
-        } else if matches!(vehicle.vehicle_type, VehicleType::Locomotive) {
-            if zero_number_identifiers.len() == 1 {
-                if let Some(identifier) = zero_number_identifiers[0].clone() {
-                    vehicle.vehicle_identifier = Some(identifier);
-                }
-            } else {
-                if let Some(identifier) = zero_number_identifiers
-                    .get(loco_index)
-                    .cloned()
-                    .unwrap_or(None)
-                {
-                    vehicle.vehicle_identifier = Some(identifier);
-                }
-                loco_index = loco_index.saturating_add(1);
-            }
-        }
-
-        if let Some(sector) = sectors_pos.get(index).copied().flatten() {
-            vehicle.sector = Some(sector);
         }
     }
 
-    vehicles
+    out
 }
 
 fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
@@ -614,7 +780,7 @@ pub fn get_train_formation(
     day: u32,
     token: &str,
 ) -> Result<FormationResponse, String> {
-    let base_url = "https://api.opentransportdata.swiss/formation/v2";
+    let base_url = "https://api.opentransportdata.swiss/formation/v1";
 
     let url = format!(
         "{}/formations_full?evu=SBBP&operationDate={}-{}-{}&trainNumber={}",
