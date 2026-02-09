@@ -7,6 +7,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use VehicleType::FamilyCar;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatusFlag {
@@ -57,6 +58,7 @@ pub struct Vehicle {
     pub order_number: Option<u32>,
     pub offers: Vec<Offer>,
     pub vehicle_identifier: Option<VehicleIdentifier>,
+    pub access_to_previous_vehicle: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -226,6 +228,8 @@ pub struct FormationVehicleAtScheduledStop {
     pub stop_point: StopPoint,
     #[serde(default, deserialize_with = "null_to_empty_opt")]
     pub sectors: Option<String>,
+    #[serde(default)]
+    pub access_to_previous_vehicle: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -414,7 +418,7 @@ fn parse_vehicle_type(s: &str) -> VehicleType {
         "1" => VehicleType::FirstClass,
         "2" => VehicleType::SecondClass,
         "12" => VehicleType::FirstAndSecondClass,
-        "FA" => VehicleType::FamilyCar,
+        "FA" => FamilyCar,
         "WL" => VehicleType::SleepingCar,
         "WR" => VehicleType::Restaurant,
         "W1" => VehicleType::DiningFirstClass,
@@ -463,7 +467,7 @@ fn vehicle_type_from_detailed(vehicle: &FormationVehicle) -> VehicleType {
     }
 
     if type_name.contains("Fam") {
-        return VehicleType::FamilyCar;
+        return FamilyCar;
     }
 
     if n1 > 0 && n2 > 0 {
@@ -568,10 +572,44 @@ fn short_string_car1_left(formation_short: &str) -> Option<bool> {
     Some(idx <= last_idx.saturating_sub(idx))
 }
 
+fn short_string_numbers(formation_short: &str) -> BTreeSet<u32> {
+    let mut numbers = BTreeSet::new();
+    if formation_short.is_empty() {
+        return numbers;
+    }
+
+    let num_re = Regex::new(r":(\d+)").ok();
+    let Some(num_re) = num_re else {
+        return numbers;
+    };
+
+    for part in formation_short.split(',') {
+        let tok = part.trim();
+        if tok.is_empty() {
+            continue;
+        }
+
+        let mut last_num: Option<u32> = None;
+        for cap in num_re.captures_iter(tok) {
+            if let Some(num_str) = cap.get(1) {
+                if let Ok(num) = num_str.as_str().parse::<u32>() {
+                    last_num = Some(num);
+                }
+            }
+        }
+        if let Some(num) = last_num {
+            numbers.insert(num);
+        }
+    }
+
+    numbers
+}
+
 pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) -> Vec<Vehicle> {
     let stop = &train.formations_at_scheduled_stops[stop_index];
     let stop_uic = stop.scheduled_stop.stop_point.uic;
     let short_left = short_string_car1_left(&stop.formation_short.formation_short_string);
+    let short_numbers = short_string_numbers(&stop.formation_short.formation_short_string);
 
     let Some(formation) = train.formations.first() else {
         return Vec::new();
@@ -596,7 +634,11 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
             .filter_map(|s| stop_index_by_uic.get(&s.stop_point.uic).copied())
             .min();
         if earliest_idx.map_or(false, |idx| current_stop_index < idx) {
-            continue;
+            let allow_from_short = formation_vehicle.number > 0
+                && short_numbers.contains(&formation_vehicle.number);
+            if !allow_from_short {
+                continue;
+            }
         }
 
         let mut stop_info = formation_vehicle
@@ -645,6 +687,7 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
             },
             offers: offers_from_detailed(&formation_vehicle),
             vehicle_identifier: formation_vehicle.vehicle_identifier.clone(),
+            access_to_previous_vehicle: stop_info.and_then(|info| info.access_to_previous_vehicle),
         };
 
         out.push(vehicle);
@@ -671,6 +714,15 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
                     }
                 }
                 out.reverse();
+                let prev_access: Vec<Option<bool>> =
+                    out.iter().map(|v| v.access_to_previous_vehicle).collect();
+                for (i, vehicle) in out.iter_mut().enumerate() {
+                    vehicle.access_to_previous_vehicle = if i == 0 {
+                        None
+                    } else {
+                        prev_access[i - 1]
+                    };
+                }
                 if !sector_map.is_empty() {
                     for vehicle in out.iter_mut() {
                         if let Some(sec) = vehicle.sector {
@@ -769,6 +821,7 @@ fn parse_vehicle(raw: &str, sector: Option<char>) -> Option<Vehicle> {
         order_number,
         offers,
         vehicle_identifier: None,
+        access_to_previous_vehicle: None,
     })
 }
 

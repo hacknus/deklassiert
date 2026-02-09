@@ -150,8 +150,6 @@ fn TrainView(train: FormationResponse) -> Element {
                         .map(|t| t.format("%H:%M").to_string());
 
 
-                    let mut prev_had_lowfloor = false;
-
                     // filter out fictional and parked cars
                     cars = cars.iter().filter(|c| c.vehicle_type != VehicleType::Fictional && c.vehicle_type != VehicleType::Parked).cloned().collect::<Vec<_>>();
 
@@ -163,96 +161,251 @@ fn TrainView(train: FormationResponse) -> Element {
                     let rendered_cars: Vec<(Asset, Vec<Asset>, bool, Option<u32>, Option<char>, Option<VehicleIdentifier>)> =
                         cars.iter().enumerate().filter_map(|(i,car)| {
 
+                            let type_name = car
+                                .vehicle_identifier
+                                .as_ref()
+                                .and_then(|v| v.type_code_name.as_deref())
+                                .unwrap_or("");
+                            let is_closed = car.status.contains(&StatusFlag::Closed);
+                            let is_deklassiert = car.status.contains(&StatusFlag::Deklassiert);
+                            let is_loco_name = type_name.starts_with("Re");
+                            let is_steuerwagen_name =
+                                type_name.starts_with("Bt") || type_name.starts_with("At");
+                            let has_class = matches!(
+                                car.vehicle_type,
+                                VehicleType::FirstClass
+                                    | VehicleType::DiningFirstClass
+                                    | VehicleType::SecondClass
+                                    | VehicleType::DiningSecondClass
+                                    | VehicleType::FamilyCar
+                                    | VehicleType::FirstAndSecondClass
+                            );
+
+                            let has_lowfloor =
+                                car.offers.contains(&Offer::LowFloor) || type_name.contains("2E");
+                            let has_bike = car.offers.contains(&Offer::BikeHooks)
+                                || type_name.starts_with("Apm61")
+                                || type_name.starts_with("Bpm61")
+                                || type_name.starts_with("B3(503")
+                                || type_name.starts_with("Bt4")
+                                || type_name.starts_with("Bt(2E")
+                                || type_name.to_lowercase().contains("velo");
+                            let has_wheelchair = car.offers.contains(&Offer::Wheelchair)
+                                || type_name.starts_with("Bpm61")
+                                || type_name.starts_with("AD")
+                                || type_name.starts_with("AS");
+                            let has_business = car.offers.contains(&Offer::BusinessZone)
+                                || type_name.starts_with("AD")
+                                || type_name.starts_with("AS");
+                            let has_family =
+                                car.offers.contains(&Offer::FamilyZone) || type_name.contains("Fam");
+                            let is_wra6_503 = type_name.starts_with("WRA6(503");
+                            let has_restaurant =
+                                !is_loco_name && (type_name.contains('W') || type_name.contains('R') && !type_name.to_lowercase().contains("era"));
+
                             // collect overlay icons
                             let mut overlay_icons = Vec::new();
 
-                            let class_svg = match car.vehicle_type {
+                            let mut class_svg = match car.vehicle_type {
                                 VehicleType::FirstClass | VehicleType::DiningFirstClass => Some(FIRST_CLASS_SVG),
                                 VehicleType::SecondClass | VehicleType::DiningSecondClass | VehicleType::FamilyCar=> Some(SECOND_CLASS_SVG),
+                                VehicleType::FirstAndSecondClass => None,
                                 _ => None,
                             };
+                            let mut class_label = match car.vehicle_type {
+                                VehicleType::FirstClass | VehicleType::DiningFirstClass => Some("1"),
+                                VehicleType::SecondClass | VehicleType::DiningSecondClass | VehicleType::FamilyCar => Some("2"),
+                                VehicleType::FirstAndSecondClass => Some("1/2"),
+                                _ => None,
+                            };
+
+                            if !is_closed && !has_class {
+                                if type_name.starts_with("A") {
+                                    class_svg = Some(if is_deklassiert { SECOND_CLASS_SVG } else { FIRST_CLASS_SVG });
+                                    class_label = Some(if is_deklassiert { "2" } else { "1" });
+                                } else if type_name.starts_with("B") {
+                                    class_svg = Some(SECOND_CLASS_SVG);
+                                    class_label = Some("2");
+                                }
+                            }
+
+                            if !is_closed && has_restaurant {
+                                if is_wra6_503 {
+                                    class_svg = Some(FIRST_CLASS_SVG);
+                                    class_label = Some("1");
+                                } else {
+                                    class_svg = Some(SECOND_CLASS_SVG);
+                                    class_label = Some("2");
+                                }
+                            }
 
                             if let Some(class_svg) = class_svg {
                                 overlay_icons.push(class_svg);
                             }
 
-                            if car.offers.contains(&Offer::Wheelchair) {
+                            if !is_closed && (has_wheelchair || is_wra6_503) {
+                                overlay_icons.push(WHEELCHAIR_SVG);
+                            } else if car.offers.contains(&Offer::Wheelchair) {
                                 overlay_icons.push(WHEELCHAIR_SVG);
                             }
 
-                            if car.offers.contains(&Offer::BikeHooks) {
+                            if !is_closed && has_bike {
+                                overlay_icons.push(BIKE_SVG);
+                            } else if car.offers.contains(&Offer::BikeHooks) {
                                 overlay_icons.push(BIKE_SVG);
                             }
 
-                            if car.offers.contains(&Offer::BusinessZone) {
+                            if !is_closed && has_business {
+                                overlay_icons.push(BUSINESS_ZONE_SVG);
+                            } else if car.offers.contains(&Offer::BusinessZone) {
                                 overlay_icons.push(BUSINESS_ZONE_SVG);
                             }
 
-                            let (mut icon, class_label, overlay_class) = match car.vehicle_type {
+                            let (mut icon, overlay_class) = match car.vehicle_type {
                                 VehicleType::Fictional | VehicleType::Parked => return None,
 
-                                VehicleType::Locomotive => (LOCOMOTIVE_ICON, None, "class-overlay"),
+                                VehicleType::Locomotive => (LOCOMOTIVE_ICON, "class-overlay"),
 
                                 VehicleType::FirstClass  =>
-                                    if car.offers.contains(&Offer::LowFloor) {
-                                        (IC2000_ICON, Some("1"), "class-overlay")
+                                    if has_lowfloor {
+                                        (IC2000_ICON, "class-overlay")
                                     } else {
-                                        (EW_IV_ICON, Some("1"), "class-overlay")
+                                        (EW_IV_ICON, "class-overlay")
                                     },
                                 VehicleType::DiningFirstClass =>
                                     {
-                                        overlay_icons.push(RESTAURANT_SVG);
-                                        if car.offers.contains(&Offer::LowFloor) {
-                                            (IC2000_ICON, Some("1"), "class-overlay")
+                                        if !overlay_icons.contains(&RESTAURANT_SVG) {
+                                            overlay_icons.push(RESTAURANT_SVG);
+                                        }
+                                        if has_lowfloor {
+                                            (IC2000_ICON, "class-overlay")
                                         } else {
-                                            (EW_IV_ICON, Some("1"), "class-overlay")
+                                            (EW_IV_ICON, "class-overlay")
                                         }
                                     }
 
                                 VehicleType::SecondClass =>
-                                    if car.offers.contains(&Offer::LowFloor) {
-                                        (IC2000_ICON, Some("2"), "class-overlay")
+                                    if has_lowfloor {
+                                        (IC2000_ICON, "class-overlay")
                                     } else {
-                                        if i == 0 {
-                                            // this is the first car, so show the steuerwagen!
-                                            (EW_IV_STEUERWAGEN_L_ICON, Some("2"), "class-overlay family-left")
-                                        } else if i == train_length - 1 {
-                                            // this is the last car, so show the steuerwagen!
-                                            (EW_IV_STEUERWAGEN_R_ICON, Some("2"), "class-overlay family-right")
-                                        } else {
-                                            (EW_IV_ICON, Some("2"), "class-overlay")
-                                        }
+                                        (EW_IV_ICON, "class-overlay")
                                     },
 
                                 VehicleType::DiningSecondClass =>
                                     {
-                                        overlay_icons.push(RESTAURANT_SVG);
-                                        if car.offers.contains(&Offer::LowFloor) {
-                                            (IC2000_ICON, Some("2"), "class-overlay")
+                                        if !overlay_icons.contains(&RESTAURANT_SVG) {
+                                            overlay_icons.push(RESTAURANT_SVG);
+                                        }
+                                        if has_lowfloor {
+                                            (IC2000_ICON, "class-overlay")
                                         } else {
-                                            (EW_IV_ICON, Some("2"), "class-overlay")
+                                            (EW_IV_ICON, "class-overlay")
                                         }
                                     }
 
                                 VehicleType::FamilyCar => {
                                     overlay_icons.push(FAMILY_ZONE_SVG);
-                                    if prev_had_lowfloor {
-                                        (FAMILY_CAR_R_ICON, Some("2"), "class-overlay family-right")
+                                    let left_blocked =
+                                        i == 0 || car.access_to_previous_vehicle == Some(false);
+                                    let right_blocked = i == train_length - 1
+                                        || cars
+                                            .get(i + 1)
+                                            .map(|c| c.access_to_previous_vehicle == Some(false))
+                                            .unwrap_or(true);
+                                    let icon = if left_blocked && !right_blocked {
+                                        FAMILY_CAR_L_ICON
+                                    } else if right_blocked && !left_blocked {
+                                        FAMILY_CAR_R_ICON
+                                    } else if i == train_length - 1 {
+                                        FAMILY_CAR_R_ICON
                                     } else {
-                                        (FAMILY_CAR_L_ICON, Some("2"), "class-overlay family-left")
-                                    }
+                                        FAMILY_CAR_L_ICON
+                                    };
+                                    let overlay_class = if icon == FAMILY_CAR_R_ICON {
+                                        "class-overlay family-right"
+                                    } else {
+                                        "class-overlay family-left"
+                                    };
+                                    (icon, overlay_class)
                                 }
 
                                 VehicleType::FirstAndSecondClass =>
                                     {
-                                        if car.offers.contains(&Offer::LowFloor) {
-                                            (IC2000_ICON, Some("1/2"), "class-overlay")
+                                        if has_lowfloor {
+                                            (IC2000_ICON, "class-overlay")
                                         } else {
-                                            (EW_IV_ICON, Some("1/2"), "class-overlay")
+                                            (EW_IV_ICON, "class-overlay")
                                         }
                                     },
-                                _ => (IC2000_ICON, None, "class-overlay"),
+                                _ => (IC2000_ICON, "class-overlay"),
                             };
+
+                            if !is_closed && is_loco_name {
+                                icon = LOCOMOTIVE_ICON;
+                            } else if !is_closed && is_steuerwagen_name {
+                                if type_name.starts_with("Bt") && type_name.contains("(2E") {
+                                    let left_is_2e = if i > 0 {
+                                        cars.get(i - 1)
+                                            .and_then(|c| {
+                                                c.vehicle_identifier
+                                                    .as_ref()
+                                                    .and_then(|v| v.type_code_name.as_deref())
+                                            })
+                                            .map(|t| t.contains("(2E"))
+                                            .unwrap_or(false)
+                                    } else {
+                                        false
+                                    };
+                                    let right_is_2e = cars
+                                        .get(i + 1)
+                                        .and_then(|c| {
+                                            c.vehicle_identifier
+                                                .as_ref()
+                                                .and_then(|v| v.type_code_name.as_deref())
+                                        })
+                                        .map(|t| t.contains("(2E"))
+                                        .unwrap_or(false);
+                                    if right_is_2e && !left_is_2e {
+                                        icon = EW_IV_STEUERWAGEN_L_ICON;
+                                    } else if left_is_2e && !right_is_2e {
+                                        icon = EW_IV_STEUERWAGEN_R_ICON;
+                                    } else {
+                                        let left_blocked =
+                                            i == 0 || car.access_to_previous_vehicle == Some(false);
+                                        let right_blocked = i == train_length - 1
+                                            || cars
+                                                .get(i + 1)
+                                                .map(|c| c.access_to_previous_vehicle == Some(false))
+                                                .unwrap_or(true);
+                                        if left_blocked && !right_blocked {
+                                            icon = EW_IV_STEUERWAGEN_L_ICON;
+                                        } else if right_blocked && !left_blocked {
+                                            icon = EW_IV_STEUERWAGEN_R_ICON;
+                                        } else if i == 0 {
+                                            icon = EW_IV_STEUERWAGEN_L_ICON;
+                                        } else if i == train_length - 1 {
+                                            icon = EW_IV_STEUERWAGEN_R_ICON;
+                                        }
+                                    }
+                                } else {
+                                    let left_blocked =
+                                        i == 0 || car.access_to_previous_vehicle == Some(false);
+                                    let right_blocked = i == train_length - 1
+                                        || cars
+                                            .get(i + 1)
+                                            .map(|c| c.access_to_previous_vehicle == Some(false))
+                                            .unwrap_or(true);
+                                    if left_blocked && !right_blocked {
+                                        icon = EW_IV_STEUERWAGEN_L_ICON;
+                                    } else if right_blocked && !left_blocked {
+                                        icon = EW_IV_STEUERWAGEN_R_ICON;
+                                    } else if i == 0 {
+                                        icon = EW_IV_STEUERWAGEN_L_ICON;
+                                    } else if i == train_length - 1 {
+                                        icon = EW_IV_STEUERWAGEN_R_ICON;
+                                    }
+                                }
+                            }
 
                             let is_family_right = icon == FAMILY_CAR_R_ICON  || icon == EW_IV_STEUERWAGEN_R_ICON;
 
@@ -274,19 +427,31 @@ fn TrainView(train: FormationResponse) -> Element {
                                 overlay_icons.push(GROUP_SVG);
                             };
 
-                            if car.offers.contains(&Offer::FamilyZone) {
+                            if !is_closed && has_family {
+                                if !overlay_icons.contains(&FAMILY_ZONE_SVG) {
+                                    overlay_icons.push(FAMILY_ZONE_SVG);
+                                }
+                            } else if car.offers.contains(&Offer::FamilyZone) {
                                 if !overlay_icons.contains(&FAMILY_ZONE_SVG) {
                                     overlay_icons.push(FAMILY_ZONE_SVG);
                                 }
                             };
 
-                            if car.offers.contains(&Offer::LowFloor) {
+                            if !is_closed && has_lowfloor {
+                                overlay_icons.push(LOW_FLOOR_SVG);
+                            } else if car.offers.contains(&Offer::LowFloor) {
                                 overlay_icons.push(LOW_FLOOR_SVG);
                             };
 
-                            prev_had_lowfloor = car.offers.contains(&Offer::LowFloor);
+                            if !is_closed && has_restaurant {
+                                if !overlay_icons.contains(&RESTAURANT_SVG) {
+                                    overlay_icons.push(RESTAURANT_SVG);
+                                }
+                            }
 
                             let identifier = car.vehicle_identifier.clone();
+                            let _class_label = class_label;
+                            let _overlay_class = overlay_class;
                             Some((icon, overlay_icons, is_family_right, car.order_number, car.sector, identifier))
                         })
                         .collect();
