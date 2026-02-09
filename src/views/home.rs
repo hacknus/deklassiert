@@ -649,6 +649,18 @@ fn select_current_or_next_stop(train: &FormationResponse) -> usize {
     *visible.last().unwrap_or(&0)
 }
 
+fn sort_trains_by_selected_departure(trains: &mut Vec<FormationResponse>) {
+    trains.sort_by_key(|train| {
+        let idx = select_current_or_next_stop(train);
+        let stop = &train.formations_at_scheduled_stops[idx];
+        stop.scheduled_stop
+            .stop_time
+            .departure_time
+            .or(stop.scheduled_stop.stop_time.arrival_time)
+            .map(|t| t.with_timezone(&chrono::Utc))
+    });
+}
+
 #[component]
 pub fn Home() -> Element {
     let trains_future = use_server_future(|| get_trains())?;
@@ -678,6 +690,7 @@ pub fn Home() -> Element {
         })
         .cloned()
         .collect();
+    sort_trains_by_selected_departure(&mut trains);
 
     let legend_items: Vec<(Asset, &str, &str, bool)> = vec![
         (
