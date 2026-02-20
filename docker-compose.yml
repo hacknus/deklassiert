@@ -2,7 +2,8 @@ services:
   deklassiert:
     build: .
     container_name: deklassiert
-    network_mode: host
+    ports:
+      - "8081:8081"
     env_file:
       - .env
     volumes:

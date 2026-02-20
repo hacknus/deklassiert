@@ -540,13 +540,28 @@ fn offers_from_detailed(vehicle: &FormationVehicle) -> Vec<Offer> {
     offers
 }
 
-fn short_string_car1_left(formation_short: &str) -> Option<bool> {
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ShortEl {
+    Loco,
+    Car(u32),
+}
+
+#[derive(Debug, Clone)]
+struct ShortItem {
+    kind: ShortEl,
+    sector: Option<char>,
+    is_family: bool,
+}
+
+fn short_string_items(formation_short: &str) -> Vec<ShortItem> {
     if formation_short.is_empty() {
-        return None;
+        return Vec::new();
     }
 
-    let num_re = Regex::new(r":(\d+)").ok()?;
-    let mut seq: Vec<u32> = Vec::new();
+    let num_re = Regex::new(r":(\d+)").ok();
+
+    let mut items = Vec::new();
+    let mut current_sector: Option<char> = None;
 
     for part in formation_short.split(',') {
         let tok = part.trim();
@@ -554,17 +569,67 @@ fn short_string_car1_left(formation_short: &str) -> Option<bool> {
             continue;
         }
 
+        if let Some(idx) = tok.find('@') {
+            if let Some(letter) = tok[idx + 1..].chars().next() {
+                if letter.is_ascii_uppercase() {
+                    current_sector = Some(letter);
+                }
+            }
+        }
+
+        let is_family = tok.contains("FA");
+
+        if tok.contains("LK") && !tok.contains(':') {
+            items.push(ShortItem {
+                kind: ShortEl::Loco,
+                sector: current_sector,
+                is_family: false,
+            });
+            continue;
+        }
+
         let mut last_num: Option<u32> = None;
-        for cap in num_re.captures_iter(tok) {
-            if let Some(num_str) = cap.get(1) {
-                if let Ok(num) = num_str.as_str().parse::<u32>() {
-                    last_num = Some(num);
+        if let Some(re) = &num_re {
+            for cap in re.captures_iter(tok) {
+                if let Some(num_str) = cap.get(1) {
+                    if let Ok(num) = num_str.as_str().parse::<u32>() {
+                        last_num = Some(num);
+                    }
                 }
             }
         }
         if let Some(num) = last_num {
-            seq.push(num);
+            items.push(ShortItem {
+                kind: ShortEl::Car(num),
+                sector: current_sector,
+                is_family,
+            });
+        } else if tok.contains("LK") {
+            items.push(ShortItem {
+                kind: ShortEl::Loco,
+                sector: current_sector,
+                is_family: false,
+            });
         }
+    }
+
+    items
+}
+
+fn short_string_numbers_seq(formation_short: &str) -> Vec<u32> {
+    short_string_items(formation_short)
+        .into_iter()
+        .filter_map(|i| match i.kind {
+            ShortEl::Car(n) => Some(n),
+            _ => None,
+        })
+        .collect()
+}
+
+fn short_string_car1_left(formation_short: &str) -> Option<bool> {
+    let seq = short_string_numbers_seq(formation_short);
+    if seq.is_empty() {
+        return None;
     }
 
     let idx = seq.iter().position(|n| *n == 1)?;
@@ -573,43 +638,18 @@ fn short_string_car1_left(formation_short: &str) -> Option<bool> {
 }
 
 fn short_string_numbers(formation_short: &str) -> BTreeSet<u32> {
-    let mut numbers = BTreeSet::new();
-    if formation_short.is_empty() {
-        return numbers;
-    }
-
-    let num_re = Regex::new(r":(\d+)").ok();
-    let Some(num_re) = num_re else {
-        return numbers;
-    };
-
-    for part in formation_short.split(',') {
-        let tok = part.trim();
-        if tok.is_empty() {
-            continue;
-        }
-
-        let mut last_num: Option<u32> = None;
-        for cap in num_re.captures_iter(tok) {
-            if let Some(num_str) = cap.get(1) {
-                if let Ok(num) = num_str.as_str().parse::<u32>() {
-                    last_num = Some(num);
-                }
-            }
-        }
-        if let Some(num) = last_num {
-            numbers.insert(num);
-        }
-    }
-
-    numbers
+    short_string_numbers_seq(formation_short)
+        .into_iter()
+        .collect()
 }
 
 pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) -> Vec<Vehicle> {
     let stop = &train.formations_at_scheduled_stops[stop_index];
     let stop_uic = stop.scheduled_stop.stop_point.uic;
-    let short_left = short_string_car1_left(&stop.formation_short.formation_short_string);
-    let short_numbers = short_string_numbers(&stop.formation_short.formation_short_string);
+    let short_str = &stop.formation_short.formation_short_string;
+    let short_items = short_string_items(short_str);
+    let short_seq = short_string_numbers_seq(short_str);
+    let short_numbers = short_string_numbers(short_str);
 
     let Some(formation) = train.formations.first() else {
         return Vec::new();
@@ -634,8 +674,19 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
             .filter_map(|s| stop_index_by_uic.get(&s.stop_point.uic).copied())
             .min();
         if earliest_idx.map_or(false, |idx| current_stop_index < idx) {
+            let type_name = formation_vehicle
+                .vehicle_identifier
+                .as_ref()
+                .and_then(|v| v.type_code_name.as_deref())
+                .unwrap_or("");
+            let is_family_like = type_name.contains("Fam")
+                || type_name.starts_with("Bt")
+                || type_name.starts_with("At");
             let allow_from_short = formation_vehicle.number > 0
-                && short_numbers.contains(&formation_vehicle.number);
+                && short_numbers.contains(&formation_vehicle.number)
+                || (formation_vehicle.number == 0
+                    && is_family_like
+                    && short_str.contains("FA"));
             if !allow_from_short {
                 continue;
             }
@@ -674,13 +725,28 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
             }
         }
 
+        let is_loco_identifier = formation_vehicle
+            .vehicle_identifier
+            .as_ref()
+            .and_then(|v| v.type_code_name.as_deref())
+            .map(|name| name.starts_with("Re"))
+            .unwrap_or(false)
+            || formation_vehicle
+                .vehicle_identifier
+                .as_ref()
+                .and_then(|v| v.type_code)
+                .map(|code| code == 1057)
+                .unwrap_or(false);
+
         let vehicle = Vehicle {
             sector,
             status,
             no_passage_left: false,
             no_passage_right: false,
             vehicle_type: vehicle_type_from_detailed(&formation_vehicle),
-            order_number: if formation_vehicle.number > 0 {
+            order_number: if is_loco_identifier {
+                None
+            } else if formation_vehicle.number > 0 {
                 Some(formation_vehicle.number)
             } else {
                 None
@@ -693,45 +759,102 @@ pub fn parse_formation_for_stop(train: &FormationResponse, stop_index: usize) ->
         out.push(vehicle);
     }
 
-    if let Some(desired_left) = short_left {
-        if let Some(idx) = out.iter().position(|v| v.order_number == Some(1)) {
-            let last_idx = out.len().saturating_sub(1);
-            let current_left = idx <= last_idx.saturating_sub(idx);
-            if current_left != desired_left {
-                let mut sector_set: BTreeSet<char> = BTreeSet::new();
-                for vehicle in out.iter() {
-                    if let Some(sec) = vehicle.sector {
-                        sector_set.insert(sec);
+    let is_loco_id = |vehicle: &Vehicle| {
+        vehicle
+            .vehicle_identifier
+            .as_ref()
+            .and_then(|v| v.type_code_name.as_deref())
+            .map(|name| name.starts_with("Re"))
+            .unwrap_or(false)
+            || vehicle
+                .vehicle_identifier
+                .as_ref()
+                .and_then(|v| v.type_code)
+                .map(|code| code == 1057)
+                .unwrap_or(false)
+    };
+
+    if !short_items.is_empty() {
+        let mut by_number: HashMap<u32, Vehicle> = HashMap::new();
+        let mut locos: Vec<Vehicle> = Vec::new();
+        let mut extras: Vec<Vehicle> = Vec::new();
+        let mut family_pool: Vec<Vehicle> = Vec::new();
+
+        for v in out.into_iter() {
+            if v.vehicle_type == VehicleType::Locomotive || is_loco_id(&v) {
+                locos.push(v);
+                continue;
+            }
+            let is_family = v
+                .vehicle_identifier
+                .as_ref()
+                .and_then(|id| id.type_code_name.as_deref())
+                .map(|name| name.contains("Fam"))
+                .unwrap_or(false);
+            if is_family {
+                family_pool.push(v);
+                continue;
+            }
+            if let Some(num) = v.order_number {
+                by_number.insert(num, v);
+            } else {
+                extras.push(v);
+            }
+        }
+
+        let mut used_numbers: BTreeSet<u32> = BTreeSet::new();
+        let mut used_loco = 0usize;
+        let mut ordered: Vec<Vehicle> = Vec::new();
+
+        for item in short_items.iter() {
+            match item.kind {
+                ShortEl::Loco => {
+                    if let Some(mut loco) = locos.get(used_loco).cloned() {
+                        loco.order_number = None;
+                        loco.sector = item.sector.or(loco.sector);
+                        ordered.push(loco);
+                        used_loco += 1;
                     }
                 }
-                let sectors: Vec<char> = sector_set.into_iter().collect();
-                let mut sector_map: HashMap<char, char> = HashMap::new();
-                let len = sectors.len();
-                if len > 1 {
-                    for (i, sec) in sectors.iter().enumerate() {
-                        let mirror = sectors[len - 1 - i];
-                        sector_map.insert(*sec, mirror);
+                ShortEl::Car(num) => {
+                    if used_numbers.contains(&num) {
+                        continue;
+                    }
+                    used_numbers.insert(num);
+                    if item.is_family && !family_pool.is_empty() {
+                        let mut v = family_pool.remove(0);
+                        v.order_number = Some(num);
+                        v.sector = item.sector.or(v.sector);
+                        ordered.push(v);
+                    } else if let Some(mut v) = by_number.remove(&num) {
+                        v.order_number = Some(num);
+                        v.sector = item.sector.or(v.sector);
+                        ordered.push(v);
+                    } else if item.is_family && !extras.is_empty() {
+                        let mut v = extras.remove(0);
+                        v.order_number = Some(num);
+                        v.sector = item.sector.or(v.sector);
+                        ordered.push(v);
                     }
                 }
-                out.reverse();
-                let prev_access: Vec<Option<bool>> =
-                    out.iter().map(|v| v.access_to_previous_vehicle).collect();
-                for (i, vehicle) in out.iter_mut().enumerate() {
-                    vehicle.access_to_previous_vehicle = if i == 0 {
-                        None
-                    } else {
-                        prev_access[i - 1]
-                    };
-                }
-                if !sector_map.is_empty() {
-                    for vehicle in out.iter_mut() {
-                        if let Some(sec) = vehicle.sector {
-                            if let Some(mapped) = sector_map.get(&sec).copied() {
-                                vehicle.sector = Some(mapped);
-                            }
-                        }
-                    }
-                }
+            }
+        }
+
+        ordered.extend(family_pool.into_iter());
+        for (_, v) in by_number.into_iter() {
+            ordered.push(v);
+        }
+        ordered.extend(extras.into_iter());
+        ordered.extend(locos.into_iter().skip(used_loco).map(|mut v| {
+            v.order_number = None;
+            v
+        }));
+
+        out = ordered;
+    } else {
+        for vehicle in out.iter_mut() {
+            if vehicle.vehicle_type == VehicleType::Locomotive || is_loco_id(vehicle) {
+                vehicle.order_number = None;
             }
         }
     }
